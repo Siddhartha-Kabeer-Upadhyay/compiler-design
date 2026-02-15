@@ -1,14 +1,13 @@
 # Glint
 
-A compiled esoteric programming language where source code is an image.
+A transpiled esoteric programming language where source code is an image and output is C.
 
 ---
 
 ## What is Glint exactly?
 
-Glint is a visual, compiled esoteric language where:
-
 - **Source code** = PNG image
+- **Target code** = C
 - **Instructions** = HSV color values of pixels
 - **Execution** = 2D pointer movement through the image
 - **Memory** = Stack + 3 registers (A, B, C)
@@ -18,12 +17,14 @@ Glint is a visual, compiled esoteric language where:
 
 ## Core Concept
 
-### Saturation Determines Meaning
+### Combination Determines Meaning
 
-| Saturation | Meaning |
-|------------|---------|
-| **S ≤ 20%** | **DATA**: Push brightness (V, 0-255) onto stack |
-| **S > 20%** | **CODE**: Execute instruction based on Hue |
+| Condition | Type | Behavior |
+|-----------|------|----------|
+| Alpha = 0 | Transparent | Error halt, `exit(1)` |
+| R=0, G=0, B=0 | Black | Clean halt, `exit(0)` |
+| S ≤ 20% | Data | Push V (0-255) onto stack |
+| S > 20% | Code | Execute instruction based on hue |
 
 ### Value Modifies Instructions
 
@@ -34,94 +35,29 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 | **V < 128** | Base instruction |
 | **V ≥ 128** | Alternate instruction |
 
-* An exception applies to this condition, as listed below;
-
-| Pixel | Detection | Effect |
-|-------|-------|--------|
-| **BLACK** | H = 0, S=0, V=0, A=255 | exit(0) |
-| **TRANSPARENT or NULL** | A=0 | exit(1) |
-
 ---
 
 ## Instruction Set
 
-| Hue Range | Color | V < 128 | V ≥ 128 | Stack Effect |
-|-----------|-------|---------|---------|--------------|
-| 0-17° | Red | RIGHT | RIGHT + SKIP | — |
-| 18-35° | Orange | DOWN | DOWN + SKIP | — |
-| 36-53° | Yellow | LEFT | LEFT + SKIP | — |
-| 54-71° | Lime | UP | UP + SKIP | — |
-| 72-89° | Green | POP | SWAP | `[a]→[]` / `[a,b]→[b,a]` |
-| 90-107° | Teal | ADD | SUB | `[a,b]→[a+b]` / `[a,b]→[a-b]` |
-| 108-125° | Cyan | MUL | DIV | `[a,b]→[a*b]` / `[a,b]→[a/b]` |
-| 126-143° | Sky | MOD | NEG | `[a,b]→[a%b]` / `[a]→[-a]` |
-| 144-161° | Blue | DUP | OVER | `[a]→[a,a]` / `[a,b]→[a,b,a]` |
-| 162-179° | Indigo | STORE A | LOAD A | Stack ↔ Register A |
-| 180-197° | Purple | STORE B | LOAD B | Stack ↔ Register B |
-| 198-215° | Violet | STORE C | LOAD C | Stack ↔ Register C |
-| 216-233° | Magenta | JNZ | JZ | `[a]→[]`, turn right if condition met |
-| 234-251° | Pink | JPOS | JNEG | `[a]→[]`, turn right if condition met |
-| 252-269° | Rose | JNZ (peek) | JZ (peek) | `[a]→[a]`, non-destructive check |
-| 270-287° | Salmon | IN (num) | IN (char) | `[]→[input]` |
-| 288-305° | Coral | OUT (num) | OUT (char) | `[a]→[]` |
-| 306-323° | Peach | INC | DEC | `[a]→[a+1]` / `[a]→[a-1]` |
-| 324-341° | Gold | ROT | ROTR | `[a,b,c]→[b,c,a]` / `→[c,a,b]` |
-| 342-359° | Crimson | SHL | SHR | `[a,b]→[a<<b]` / `[a,b]→[a>>b]` |
+| Hue | Color | V < 128 | V ≥ 128 | Stack Effect | Category |
+|-----|-------|---------|---------|--------------|----------|
+| 0-24° | Red | RIGHT | RIGHT_SKIP | — | Direction |
+| 24-48° | Orange | DOWN | DOWN_SKIP | — | Direction |
+| 48-72° | Yellow | LEFT | LEFT_SKIP | — | Direction |
+| 72-96° | Lime | UP | UP_SKIP | — | Direction |
+| 96-120° | Green | POP | SWAP | `[a]→[]` / `[a,b]→[b,a]` | Stack |
+| 120-144° | Teal | ADD | SUB | `[a,b]→[a+b]` / `[a,b]→[a-b]` | Math |
+| 144-168° | Cyan | MUL | DIV | `[a,b]→[a*b]` / `[a,b]→[a/b]` | Math |
+| 168-192° | Sky | MOD | NEG | `[a,b]→[a%b]` / `[a]→[-a]` | Math |
+| 192-216° | Blue | INC | DEC | `[a]→[a+1]` / `[a]→[a-1]` | Math |
+| 216-240° | Indigo | STORE_A | LOAD_A | `[a]→[]` / `[]→[A]` | Register |
+| 240-264° | Violet | STORE_B | LOAD_B | `[a]→[]` / `[]→[B]` | Register |
+| 264-288° | Purple | JNZ | JZ | `[a]→[]` | Conditional |
+| 288-312° | Magenta | IN_NUM | IN_CHR | `[]→[input]` | I/O |
+| 312-336° | Pink | OUT_NUM | OUT_CHR | `[a]→[]` | I/O |
+| 336-360° | Rose | NOP | DEBUG | — | Control |
 
 ---
-
-## Quick Reference
-
-```
-DIRECTION (0-71°):
-┌─────────┬─────────┬─────────┬─────────┐
-│   RED   │ ORANGE  │ YELLOW  │  LIME   │
-│  0-17°  │ 18-35°  │ 36-53°  │ 54-71°  │
-│    →    │    ↓    │    ←    │    ↑    │
-└─────────┴─────────┴─────────┴─────────┘
-
-STACK (72-89°, 144-161°, 324-341°):
-┌─────────┬─────────┬─────────┐
-│  GREEN  │  BLUE   │  GOLD   │
-│ POP/SWAP│ DUP/OVER│ ROT/ROTR│
-└─────────┴─────────┴─────────┘
-
-MATH (90-143°):
-┌─────────┬─────────┬─────────┐
-│  TEAL   │  CYAN   │   SKY   │
-│ ADD/SUB │ MUL/DIV │ MOD/NEG │
-└─────────┴─────────┴─────────┘
-
-REGISTERS (162-215°):
-┌─────────┬─────────┬─────────┐
-│  INDIGO │  PURPLE │  VIOLET │
-│  REG A  │  REG B  │  REG C  │
-└─────────┴─────────┴─────────┘
-
-CONDITIONALS (216-269°):
-┌─────────┬─────────┬─────────┐
-│ MAGENTA │  PINK   │  ROSE   │
-│ JNZ/JZ  │JPOS/JNEG│ (peek)  │
-└─────────┴─────────┴─────────┘
-
-I/O (270-305°):
-┌─────────┬─────────┐
-│ SALMON  │  CORAL  │
-│   IN    │   OUT   │
-└─────────┴─────────┘
-
-CONTROL & BITWISE (306-359°):
-┌─────────┬─────────┬─────────┐
-│  PEACH  │  GOLD   │ CRIMSON │
-│NOP/HALT │ROT/ROTR │ SHL/SHR │
-└─────────┴─────────┴─────────┘
-
-DATA (any hue, S ≤ 20%):
-┌─────────────────────────────┐
-│  Grayscale pixels = PUSH V  │
-│  Black (0) to White (255)   │
-└─────────────────────────────┘
-```
 
 ---
 
@@ -147,10 +83,10 @@ DATA (any hue, S ≤ 20%):
 │  Grows upward, standard operations  │
 └─────────────────────────────────────┘
 
-┌─────────┬─────────┬─────────┐
-│  REG A  │  REG B  │  REG C  │
-│  (int)  │  (int)  │  (int)  │
-└─────────┴─────────┴─────────┘
+┌─────────┬─────────┐
+│  REG A  │  REG B  │
+│  (int)  │  (int)  │
+└─────────┴─────────┘
 ```
 
 ---
@@ -192,8 +128,8 @@ gcc output.c -o program
 
 ```
 ┌─────────┬─────────┬─────────┬─────────┬─────────┐
-│ Salmon  │ Salmon  │  Teal   │  Coral  │  Black  │
-│ IN(num) │ IN(num) │   ADD   │OUT(num) │  HALT   │
+│ Magenta │ Magenta │  Teal   │  Pink   │  Black  │
+│ IN(num) │ IN(num) │  ADD    │ OUT(num)│  HALT   │
 └─────────┴─────────┴─────────┴─────────┴─────────┘
 ```
 
@@ -206,28 +142,7 @@ Execution:
 
 ---
 
-### Example 2: Print "Hi"
-
-**Output**: `Hi`
-
-```
-┌──────────┬──────────┬──────────┬──────────┐
-│ Gray     │ Coral    │ Gray     │ Coral    │
-│ S=10%    │ V≥128    │ S=10%    │ V≥128    │
-│ V=72     │ OUT(chr) │ V=105    │ OUT(chr) │
-│ PUSH 72  │          │ PUSH 105 │          │
-└──────────┴──────────┴──────────┴──────────┘
-```
-
-Execution:
-1. Gray V=72 → Push 72 (ASCII 'H'), stack: `[72]`
-2. Coral V≥128 → OUT as ASCII, print `H`, stack: `[]`
-3. Gray V=105 → Push 105 (ASCII 'i'), stack: `[105]`
-4. Coral V≥128 → OUT as ASCII, print `i`, stack: `[]`
-
----
-
-## Project Structure
+## Project Structure (Subject to Change)
 
 ```
 glint/
