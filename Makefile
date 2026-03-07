@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
-SRC = src/main.c src/hsv.c
+SRC = src/main.c src/hsv.c src/instruction.c
 OUT = glint
 
 all: $(OUT)
