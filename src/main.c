@@ -4,6 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "hsv.h"
+#include "instruction.h"
 
 int main(int argc, char *argv[]) 
 {
@@ -16,8 +17,8 @@ int main(int argc, char *argv[])
     int width, height, channels;
     unsigned char *img = stbi_load(argv[1], &width, &height, &channels, 4);
 
-	// image not found
-    if (!img) 
+
+    if (!img) // image not found
 	{
         fprintf(stderr, "Error: Could not load image '%s'\n", argv[1]);
         return 1;
@@ -26,8 +27,7 @@ int main(int argc, char *argv[])
 	// image information and pixel values
     printf("Loaded: \t%s\n", argv[1]);
     printf("Size: \t\t%d x %d\n", width, height);
-    printf("Channels: \t%d \n\n", channels);
-
+  
     printf("Pixels:\n");
     for (int y = 0; y < height; y++) 
 	{
@@ -39,8 +39,19 @@ int main(int argc, char *argv[])
             unsigned char b = img[idx + 2];
             unsigned char a = img[idx + 3];
             
-            HSV hsv = rgb_to_hsv(r, g, b); // calling function rgb to hsv from hsv.c
-            printf("(%d,%d): R=%3d G=%3d B=%3d A=%3d | H=%3d S=%3d V=%3d\n", x, y, r, g, b, a, hsv.h, hsv.s, hsv.v); 
+            HSV hsv = rgb_to_hsv(r, g, b); // calling function for hsv resolution from hsv.c
+            DecodedPixel decoded = decode_pixel(r, g, b, a); // calling fuction for instruction resolution from instruction.c
+            
+            printf("(%d,%d): ", x, y);
+            printf("RGB(%3d,%3d,%3d) | ", r, g, b);
+            printf("HSV(%3d,%3d,%3d) -> ", hsv.h, hsv.s, hsv.v);
+            printf("%s", pixel_type_name(decoded.type));
+            
+            if (decoded.type == PIXEL_CODE)
+                printf(" [%s]", instruction_name(decoded.instr));
+            else if (decoded.type == PIXEL_DATA)
+                printf(" [PUSH %d]", decoded.data_value);
+            printf("\n");
         }
     }
 
