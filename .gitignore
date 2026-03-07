@@ -1,0 +1,30 @@
+# Compiled binary
+glint
+
+# Object files
+*.o
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Windows Zone Identifier files
+*:Zone.Identifier
+*.Identifier
+
+# Documentation folder
+docs/
+
+# Test images 
+# *.png
+
+# Build artifacts
+*.out
+*.exe
