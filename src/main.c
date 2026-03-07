@@ -3,6 +3,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "hsv.h"
 
 int main(int argc, char *argv[]) 
 {
@@ -37,7 +38,9 @@ int main(int argc, char *argv[])
             unsigned char g = img[idx + 1];
             unsigned char b = img[idx + 2];
             unsigned char a = img[idx + 3];
-            printf("(%d,%d): \tR=%3d G=%3d B=%3d A=%3d\n", x, y, r, g, b, a);
+            
+            HSV hsv = rgb_to_hsv(r, g, b); // calling function rgb to hsv from hsv.c
+            printf("(%d,%d): R=%3d G=%3d B=%3d A=%3d | H=%3d S=%3d V=%3d\n", x, y, r, g, b, a, hsv.h, hsv.s, hsv.v); 
         }
     }
 
