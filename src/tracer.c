@@ -1,15 +1,15 @@
 #include "tracer.h"
 
-static int instr_is_skip(Instruction instr) 
-{ return instr == INSTR_RIGHT_SKIP || instr == INSTR_DOWN_SKIP || instr == INSTR_LEFT_SKIP || instr == INSTR_UP_SKIP; }
+static int instr_is_skip(Instruction instr) { 
+    return instr == INSTR_RIGHT_SKIP || instr == INSTR_DOWN_SKIP || instr == INSTR_LEFT_SKIP || instr == INSTR_UP_SKIP; 
+}
 
-static int in_bounds(TracerState *state, int width, int height) 
-{ return !(state->x < 0 || state->x >= width || state->y < 0 || state->y >= height); }
+static int in_bounds(TracerState *state, int width, int height) { 
+    return !(state->x < 0 || state->x >= width || state->y < 0 || state->y >= height); 
+}
 
-static void move_once(TracerState *state)
-{
-    switch (state->dir)
-    {
+static void move_once(TracerState *state) {
+    switch (state->dir) {
         case DIR_RIGHT:
 			state->x++; 
 			break;
@@ -25,8 +25,7 @@ static void move_once(TracerState *state)
     }
 }
 
-TracerState tracer_init(void)
-{
+TracerState tracer_init(void) {
     TracerState state;
     state.x = 0;
     state.y = 0;
@@ -36,24 +35,20 @@ TracerState tracer_init(void)
     return state;
 }
 
-void tracer_step(TracerState *state, DecodedPixel pixel)
-{
-    if (pixel.type == PIXEL_HALT)
-    {
+void tracer_step(TracerState *state, DecodedPixel pixel) {
+    if (pixel.type == PIXEL_HALT) {
         state->halted = 1;
         return;
     }
 
-    if (pixel.type == PIXEL_ERROR)
-    {
+    if (pixel.type == PIXEL_ERROR) {
         state->error = 1;
         return;
     }
 
-    if (pixel.type == PIXEL_CODE)
-    {
-        switch (pixel.instr)
-        {
+    if (pixel.type == PIXEL_CODE) {
+        switch (pixel.instr) {
+            
             case INSTR_RIGHT:
             case INSTR_RIGHT_SKIP:
 				state->dir = DIR_RIGHT; 
@@ -80,22 +75,18 @@ void tracer_step(TracerState *state, DecodedPixel pixel)
     }
 }
 
-int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
-{
+int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel) {
     move_once(state); // every pixel moves the tracer but only code type can have skip jumps
 
-    if (!in_bounds(state, width, height))
-    {
+    if (!in_bounds(state, width, height)) {
         state->error = 1;
         return 0;
     }
 
-    if (pixel.type == PIXEL_CODE && instr_is_skip(pixel.instr))
-    {
+    if (pixel.type == PIXEL_CODE && instr_is_skip(pixel.instr)) {
         move_once(state);
 
-        if (!in_bounds(state, width, height))
-        {
+        if (!in_bounds(state, width, height)) {
             state->error = 1;
             return 0;
         }
@@ -104,10 +95,8 @@ int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
     return 1;
 }
 
-const char* direction_name(Direction dir)
-{
-    switch (dir)
-    {
+const char* direction_name(Direction dir) {
+    switch (dir) {
         case DIR_RIGHT: return "RIGHT";
         case DIR_DOWN:  return "DOWN";
         case DIR_LEFT:  return "LEFT";
