@@ -1,31 +1,28 @@
 #ifndef TRACER_H
 
 #define TRACER_H
-#include "instruction.h" // for directions and DecodedPixel
+#include "instruction.h" // for directions and DecodedPixel 
 
-typedef enum
-{
+typedef enum {
     DIR_RIGHT,
     DIR_DOWN,
     DIR_LEFT,
     DIR_UP
-} Direction;
+}Direction;
 
-typedef struct
-{
+typedef struct {
     int x;
     int y;
     Direction dir;
     int halted;
     int error;
-} TracerState;
+}TracerState;
 
-typedef struct
-{
+typedef struct {
     int x;
     int y;
     DecodedPixel pixel;
-} TracedStep;
+}TracedStep;
 
 TracerState tracer_init(void);
 void tracer_step(TracerState *state, DecodedPixel pixel);
