@@ -10,7 +10,7 @@ A transpiled esoteric programming language where source code is an image and out
 - **Target code** = C
 - **Instructions** = HSV color values of pixels
 - **Execution** = 2D pointer movement through the image
-- **Memory** = Stack + 3 registers (A, B, C)
+- **Memory** = Stack + 2 registers (A, B)
 - **Image Reading** = ``stb_image.h`` library is used for that specific job
 
 ---
@@ -141,33 +141,3 @@ Execution:
 5. Black pixel → HALT
 
 ---
-
-## Project Structure (Subject to Change)
-
-```
-glint/
-├── src/
-│   ├── main.c           # CLI entry point
-│   ├── image.c          # PNG loading (using stb_image)
-│   ├── image.h
-│   ├── hsv.c            # RGB → HSV conversion
-│   ├── hsv.h
-│   ├── instruction.c    # HSV → Instruction mapping
-│   ├── instruction.h
-│   ├── grid.c           # 2D instruction grid
-│   ├── grid.h
-│   ├── tracer.c         # Execution path tracing
-│   ├── tracer.h
-│   ├── codegen.c        # C code generation
-│   ├── codegen.h
-│   └── glint.h          # Main header with types/enums
-├── external/
-│   └── stb_image.h      # Single-header image loading
-├── examples/
-│   ├── add.png
-│   ├── hello.png
-│   └── loop.png
-├── Makefile
-├── LICENSE
-└── README.md
-```
