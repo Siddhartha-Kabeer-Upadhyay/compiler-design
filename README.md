@@ -1,6 +1,6 @@
 # Glint
 
-A transpiled esoteric programming language where source code is an image and output is C.
+A transpiled esoteric programming language where source code is a PNG image and the output is generated C code.
 
 ---
 
@@ -11,7 +11,14 @@ A transpiled esoteric programming language where source code is an image and out
 - **Instructions** = HSV color values of pixels
 - **Execution** = 2D pointer movement through the image
 - **Memory** = Stack + 2 registers (A, B)
-- **Image Reading** = ``stb_image.h`` library is used for that specific job
+- **Image Reading** = ``stb_image.h`` stb library
+
+### Glint treats an image as executable space:
+
+- Hue determines instruction category
+- Saturation determines data vs code
+- Value modifies instruction behavior
+- Alpha can terminate execution
 
 ---
 
@@ -76,18 +83,14 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 
 ## Memory Model
 
-```
-┌─────────────────────────────────────┐
-│              STACK                  │
-│  [bottom] .... [top]                │
-│  Grows upward, standard operations  │
-└─────────────────────────────────────┘
+### Stack
+- LIFO
+- Integer values (0–255)
+- Grows upward, standard operations
 
-┌─────────┬─────────┐
-│  REG A  │  REG B  │
-│  (int)  │  (int)  │
-└─────────┴─────────┘
-```
+### Registers
+- A (int)
+- B (int)
 
 ---
 
@@ -99,16 +102,19 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 | Stack overflow | HALT with error: `"Stack overflow at (x,y)"` |
 | Division by zero | HALT with error: `"Division by zero at (x,y)"` |
 | Modulo by zero | HALT with error: `"Modulo by zero at (x,y)"` |
-| Out of bounds | Clean HALT (normal exit) |
-| Black pixel entered | Clean HALT (normal exit) |
+| Out of bounds | Clean HALT |
+| Black pixel entered | Clean HALT |
 
 ---
 
 ## Building & Running
 
 ```bash
+# run the make file first
+make
+
 # Compile Glint source image to C
-glint input.png -o output.c
+glint input.png -o output.c # --trace to turn on tracer mode
 
 # Compile the generated C code
 gcc output.c -o program
@@ -127,10 +133,10 @@ gcc output.c -o program
 **Output**: `5`
 
 ```
-┌─────────┬─────────┬─────────┬─────────┬─────────┐
-│ Magenta │ Magenta │  Teal   │  Pink   │  Black  │
-│ IN(num) │ IN(num) │  ADD    │ OUT(num)│  HALT   │
-└─────────┴─────────┴─────────┴─────────┴─────────┘
+Magenta	: IN (num)
+Magenta	: IN (num)
+Teal	: ADD
+Black	: HALT
 ```
 
 Execution:
