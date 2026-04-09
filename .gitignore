@@ -1,0 +1,28 @@
+# Compiled binary
+glint
+
+# Object files
+*.o
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Windows Zone Identifier files
+*:Zone.Identifier
+*.Identifier
+
+# Extra Documentation folder
+docs/
+
+# Test images 
+# *.png
+
+# Build artifacts
+*.out
+*.exe
