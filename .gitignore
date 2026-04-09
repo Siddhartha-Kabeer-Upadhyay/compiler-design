@@ -21,7 +21,7 @@ Thumbs.db
 docs/
 
 # Test images 
-# *.png
+*.png
 
 # Build artifacts
 *.out
