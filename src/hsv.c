@@ -10,7 +10,7 @@ HSV rgb_to_hsv(unsigned char r, unsigned char g, unsigned char b) // converts rg
     int diff = max - min;
 
 	// Value
-    result.v = (max * 100) / 255; 
+    result.v = max;
 
 	// Saturation 
     if (max == 0) 

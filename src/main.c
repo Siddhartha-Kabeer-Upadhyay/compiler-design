@@ -13,20 +13,48 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--trace] [step_limit] [-o output.c]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [-o output.c]\n", argv[0]);
         return 1;
     }
 
 	// the whole section deals with passing step limit and trace argument after the first 2 required arguments
 	int trace_mode = 0;
+    int dump_mode = 0;
+    int run_mode = 0;
     int codegen_mode = 0;
     const char *codegen_out = NULL;
     int step_limit = 1000; // default value 
+    int step_limit_set = 0;
     
     for (int i = 2; i < argc; i++) // finds --trace and step limit
     {
         if (strcmp(argv[i], "--trace") == 0)
+        {
+            if (dump_mode || run_mode)
+            {
+                fprintf(stderr, "Error: --trace cannot be combined with --run/--dump\n");
+                return 1;
+            }
             trace_mode = 1;
+        }
+        else if (strcmp(argv[i], "--run") == 0)
+        {
+            if (trace_mode || dump_mode)
+            {
+                fprintf(stderr, "Error: --run cannot be combined with --trace/--dump\n");
+                return 1;
+            }
+            run_mode = 1;
+        }
+        else if (strcmp(argv[i], "--dump") == 0)
+        {
+            if (trace_mode || run_mode)
+            {
+                fprintf(stderr, "Error: --dump cannot be combined with --run/--trace\n");
+                return 1;
+            }
+            dump_mode = 1;
+        }
         else if (strcmp(argv[i], "-o") == 0)
         {
             if (i + 1 >= argc)
@@ -37,8 +65,37 @@ int main(int argc, char *argv[])
             codegen_mode = 1;
             codegen_out = argv[++i];
         }
+        else if (argv[i][0] == '-')
+        {
+            fprintf(stderr, "Error: Unknown flag '%s'\n", argv[i]);
+            return 1;
+        }
         else
-            step_limit = atoi(argv[i]); //ascii to intenger to deal for argv being char type
+        {
+            char *end = NULL;
+            long parsed = strtol(argv[i], &end, 10); // parse numeric step limit 
+            if (*argv[i] == '\0' || *end != '\0' || parsed <= 0)
+            {
+                fprintf(stderr, "Error: Invalid step_limit '%s'\n", argv[i]);
+                return 1;
+            }
+            if (step_limit_set)
+            {
+                fprintf(stderr, "Error: step_limit provided multiple times\n");
+                return 1;
+            }
+            step_limit = (int)parsed; // typecasting because errors without it
+            step_limit_set = 1;
+        }
+    }
+
+    if (!trace_mode && !dump_mode && !run_mode)
+        run_mode = 1;
+
+    if (step_limit_set && !trace_mode)
+    {
+        fprintf(stderr, "Error: step_limit can only be used with --trace\n");
+        return 1;
     }
 
     if (codegen_mode)
@@ -57,12 +114,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-	// image information and pixel values
-    printf("Loaded: \t%s\n", argv[1]);
-    printf("Size: \t\t%d x %d\n", width, height);
-    
-    if(!trace_mode)
+    if(dump_mode)
     {
+	    // image information and pixel values
+        printf("Loaded: \t%s\n", argv[1]);
+        printf("Size: \t\t%d x %d\n", width, height);
 	    printf("Pixels:\n");
 	    for (int y = 0; y < height; y++) 
 		{
@@ -91,14 +147,29 @@ int main(int argc, char *argv[])
 	    }
 	}
 
-	else if(trace_mode)
+    else if(trace_mode || run_mode)
     {
         TracerState state = tracer_init();
         RuntimeState rt;
         runtime_init(&rt);
-		printf("Steps:\n");
-	        for (int step = 0; step < step_limit; step++)
+        int step = 0;
+        int reached_step_limit = 0;
+
+        if (trace_mode)
         {
+            printf("Loaded: \t%s\n", argv[1]);
+            printf("Size: \t\t%d x %d\n", width, height);
+		    printf("Steps:\n");
+        }
+
+	    while (1)
+        {
+            if (trace_mode && step >= step_limit)
+            {
+                reached_step_limit = 1;
+                break;
+            }
+
             if (state.halted || state.error) break;
 
             int idx = (state.y * width + state.x) * 4; // Current pixel from tracer state position
@@ -111,47 +182,62 @@ int main(int argc, char *argv[])
 			ExecStatus exec = execute_pixel(&rt, pixel);
 			if (exec != EXEC_OK && exec != EXEC_HALT)
 			{
-			    printf("EXEC_ERROR: %s\n", exec_status_name(exec));
+			    fprintf(stderr, "EXEC_ERROR: %s\n", exec_status_name(exec));
 			    state.error = 1;
 			    break;
 			}
+
+            if (trace_mode)
+            {
+			    printf("STEP: %d POS: [%d,%d] DIR: %s TYPE: %s",
+			           step, state.x, state.y,
+			           direction_name(state.dir),
+			           pixel_type_name(pixel.type));
 			
-			printf("STEP: %d POS: [%d,%d] DIR: %s TYPE: %s",
-			       step, state.x, state.y,
-			       direction_name(state.dir),
-			       pixel_type_name(pixel.type));
+			    if (pixel.type == PIXEL_CODE)
+			        printf(" | INSTR: %s", instruction_name(pixel.instr));
+			    else if (pixel.type == PIXEL_DATA)
+			        printf(" | PUSH: %d", pixel.data_value);
 			
-			if (pixel.type == PIXEL_CODE)
-			    printf(" | INSTR: %s", instruction_name(pixel.instr));
-			else if (pixel.type == PIXEL_DATA)
-			    printf(" | PUSH: %d", pixel.data_value);
+			    if (rt.sp > 0) // top check for debugging
+			        printf(" | TOP: %d", rt.stack[rt.sp - 1]);
+			    else
+			        printf(" | TOP: EMPTY");
 			
-			if (rt.sp > 0) // top check for debugging
-			    printf(" | TOP: %d", rt.stack[rt.sp - 1]);
-			else
-			    printf(" | TOP: EMPTY");
-			
-			printf(" | SP: %d | A: %d | B: %d", rt.sp, rt.reg_a, rt.reg_b);
-            printf("\n");
+			    printf(" | SP: %d | A: %d | B: %d", rt.sp, rt.reg_a, rt.reg_b);
+                printf("\n");
+            }
 
             tracer_step(&state, pixel);
             if (exec == EXEC_HALT) { state.halted = 1; break; } // breaks preemptively for optimization
             if (state.halted || state.error) break; // breaks preemptively for optimization
             if (!tracer_move(&state, width, height, pixel)) break; // moves pointer else breaks if cannot
             if (!tracer_move_conditional(&state, width, height, rt.last_conditional_jump)) break;
+            step++;
         }
-		
-        if(state.halted)
-            printf("END: HALT at [%d,%d]\n", state.x, state.y);
-        else if(state.error)
-            printf("END: ERROR at [%d,%d]\n", state.x, state.y);
-        else
-            printf("END: STEP_LIMIT [%d]\n", step_limit);
+
+        if (trace_mode)
+        {
+            if(state.halted)
+                printf("END: HALT at [%d,%d]\n", state.x, state.y);
+            else if(state.error)
+                printf("END: ERROR at [%d,%d]\n", state.x, state.y);
+            else if (reached_step_limit)
+                printf("END: STEP_LIMIT [%d]\n", step_limit);
+        }
+
+        // cleanup
+        stbi_image_free(img);
+
+        if (state.halted)
+            return 0;
+
+        return 1;
     }
     
     else // in case of exceptions 
     {
-    	printf("UNREACHABLE POSITION REACHED.");
+	    printf("UNREACHABLE POSITION REACHED.");
     	return 1;
 	}
 	

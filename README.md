@@ -74,8 +74,9 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 4. If `S ≤ 20%`: Push `V` onto stack
 5. Else: Execute instruction from hue table (modified by V)
 6. Move pointer one step in current direction
-7. If out of bounds OR black pixel (`S=0, V=0`) → **HALT**
-8. Repeat from step 2
+7. If black pixel (`R=0,G=0,B=0`) → **Clean HALT**
+8. If out of bounds OR transparent pixel (`A=0`) → **Error HALT**
+9. Repeat from step 2
 
 ---
 
@@ -110,6 +111,15 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 ```bash
 # run the make file first
 make
+
+# Run Glint directly (default run mode)
+./glint input.png
+
+# Trace execution with optional step limit
+./glint input.png --trace 1000
+
+# Dump pixel decode table
+./glint input.png --dump
 
 # Compile Glint source image to C
 glint input.png -o output.c # --trace to turn on tracer mode
