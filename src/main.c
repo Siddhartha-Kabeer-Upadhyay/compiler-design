@@ -8,6 +8,7 @@
 #include "instruction.h"
 #include "tracer.h"
 #include "runtime.h"
+#include "codegen.h"
 
 int main(int argc, char *argv[]) 
 {
@@ -98,12 +99,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (codegen_mode)
-    {
-        fprintf(stderr, "Error: Code generation mode (-o %s) is not implemented yet\n", codegen_out);
-        return 1;
-    }
-
     int width, height, channels;
     unsigned char *img = stbi_load(argv[1], &width, &height, &channels, 4);
 
@@ -112,6 +107,18 @@ int main(int argc, char *argv[])
 	{
         fprintf(stderr, "Error: Could not load image '%s'\n", argv[1]);
         return 1;
+    }
+
+    if (codegen_mode)
+    {
+        int ok = generate_c_from_image(codegen_out, img, width, height);
+        stbi_image_free(img);
+        if (!ok)
+        {
+            fprintf(stderr, "Error: Failed to generate C file '%s'\n", codegen_out);
+            return 1;
+        }
+        return 0;
     }
 
     if(dump_mode)
