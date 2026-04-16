@@ -10,7 +10,9 @@ typedef enum
     EXEC_HALT,
     EXEC_ERR_STACK_UNDERFLOW,
     EXEC_ERR_STACK_OVERFLOW,
-    EXEC_ERR_DIV_ZERO
+    EXEC_ERR_DIV_ZERO,
+    EXEC_ERR_MOD_ZERO,
+    EXEC_ERR_INPUT
 } ExecStatus;
 
 typedef struct
@@ -19,6 +21,7 @@ typedef struct
     int sp; // stack pointer for next free index
     int reg_a;
     int reg_b;
+    int last_conditional_jump;
 } RuntimeState;
 
 void runtime_init(RuntimeState *rt);

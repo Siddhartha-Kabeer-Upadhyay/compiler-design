@@ -13,20 +13,38 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--trace] [step_limit]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--trace] [step_limit] [-o output.c]\n", argv[0]);
         return 1;
     }
 
 	// the whole section deals with passing step limit and trace argument after the first 2 required arguments
 	int trace_mode = 0;
+    int codegen_mode = 0;
+    const char *codegen_out = NULL;
     int step_limit = 1000; // default value 
     
     for (int i = 2; i < argc; i++) // finds --trace and step limit
     {
         if (strcmp(argv[i], "--trace") == 0)
             trace_mode = 1;
+        else if (strcmp(argv[i], "-o") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                fprintf(stderr, "Error: Missing output path after -o\n");
+                return 1;
+            }
+            codegen_mode = 1;
+            codegen_out = argv[++i];
+        }
         else
             step_limit = atoi(argv[i]); //ascii to intenger to deal for argv being char type
+    }
+
+    if (codegen_mode)
+    {
+        fprintf(stderr, "Error: Code generation mode (-o %s) is not implemented yet\n", codegen_out);
+        return 1;
     }
 
     int width, height, channels;
@@ -79,7 +97,7 @@ int main(int argc, char *argv[])
         RuntimeState rt;
         runtime_init(&rt);
 		printf("Steps:\n");
-        for (int step = 0; step < step_limit; step++)
+	        for (int step = 0; step < step_limit; step++)
         {
             if (state.halted || state.error) break;
 
@@ -120,6 +138,7 @@ int main(int argc, char *argv[])
             if (exec == EXEC_HALT) { state.halted = 1; break; } // breaks preemptively for optimization
             if (state.halted || state.error) break; // breaks preemptively for optimization
             if (!tracer_move(&state, width, height, pixel)) break; // moves pointer else breaks if cannot
+            if (!tracer_move_conditional(&state, width, height, rt.last_conditional_jump)) break;
         }
 		
         if(state.halted)

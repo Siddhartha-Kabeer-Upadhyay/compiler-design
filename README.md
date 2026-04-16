@@ -66,8 +66,6 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 
 ---
 
----
-
 ## Execution Model
 
 1. Pointer starts at `(0, 0)`, direction = `RIGHT`
@@ -102,7 +100,7 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 | Stack overflow | HALT with error: `"Stack overflow at (x,y)"` |
 | Division by zero | HALT with error: `"Division by zero at (x,y)"` |
 | Modulo by zero | HALT with error: `"Modulo by zero at (x,y)"` |
-| Out of bounds | Clean HALT |
+| Out of bounds | HALT with error: `"Reached Out of Bounds"` |
 | Black pixel entered | Clean HALT |
 
 ---

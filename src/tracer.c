@@ -104,6 +104,21 @@ int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
     return 1;
 }
 
+int tracer_move_conditional(TracerState *state, int width, int height, int should_move)
+{
+    if (!should_move) return 1;
+
+    move_once(state);
+
+    if (!in_bounds(state, width, height))
+    {
+        state->error = 1;
+        return 0;
+    }
+
+    return 1;
+}
+
 const char* direction_name(Direction dir)
 {
     switch (dir)

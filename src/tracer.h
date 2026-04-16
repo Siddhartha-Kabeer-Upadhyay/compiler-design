@@ -30,6 +30,7 @@ typedef struct
 TracerState tracer_init(void);
 void tracer_step(TracerState *state, DecodedPixel pixel);
 int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel);
+int tracer_move_conditional(TracerState *state, int width, int height, int should_move);
 const char* direction_name(Direction dir);
 
 #endif

@@ -1,12 +1,12 @@
 #include "instruction.h"
 #include "utils.h"
 
-PixelType classify_pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a, HSV hsv) 
+PixelType classify_pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a, HSV hsv)
 {
     if (a == 0)
         return PIXEL_ERROR; // Transparent = error
 
-    if (r == 0 && g == 0 && b == 0) 
+    if (r == 0 && g == 0 && b == 0)
         return PIXEL_HALT; // Pure black = halt
 
     if (hsv.s <= 20) // saturation check
@@ -15,12 +15,12 @@ PixelType classify_pixel(unsigned char r, unsigned char g, unsigned char b, unsi
     return PIXEL_CODE;
 }
 
-Instruction decode_instruction(HSV hsv) 
+Instruction decode_instruction(HSV hsv)
 {
     int h = hsv.h;
     int v = hsv.v;
 
-    int high_v = (v >= 50); // 50% Value threshold
+    int high_v = (v >= 128); // Value threshold for alternate variant
 
     // Hue ranges
     if (h < 24)                     // Red: 0-24
@@ -55,7 +55,7 @@ Instruction decode_instruction(HSV hsv)
         return high_v ? INSTR_DEBUG : INSTR_NOP;
 }
 
-DecodedPixel decode_pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a) 
+DecodedPixel decode_pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
     DecodedPixel result;
     result.instr = INSTR_NONE;
@@ -65,11 +65,11 @@ DecodedPixel decode_pixel(unsigned char r, unsigned char g, unsigned char b, uns
 
     result.type = classify_pixel(r, g, b, a, hsv);
 
-    if (result.type == PIXEL_CODE) 
+    if (result.type == PIXEL_CODE)
     {
         result.instr = decode_instruction(hsv);
     }
-    else if (result.type == PIXEL_DATA) 
+    else if (result.type == PIXEL_DATA)
     {
         result.data_value = max3(r, g, b);
     }
@@ -77,9 +77,9 @@ DecodedPixel decode_pixel(unsigned char r, unsigned char g, unsigned char b, uns
     return result;
 }
 
-const char* pixel_type_name(PixelType type) 
+const char* pixel_type_name(PixelType type)
 {
-    switch (type) 
+    switch (type)
     {
         case PIXEL_HALT:  return "HALT";
         case PIXEL_ERROR: return "ERROR";
@@ -89,9 +89,9 @@ const char* pixel_type_name(PixelType type)
     }
 }
 
-const char* instruction_name(Instruction instr) 
+const char* instruction_name(Instruction instr)
 {
-    switch (instr) 
+    switch (instr)
     {
         case INSTR_RIGHT:      return "RIGHT";
         case INSTR_RIGHT_SKIP: return "RIGHT_SKIP";
