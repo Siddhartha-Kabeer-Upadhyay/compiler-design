@@ -48,6 +48,7 @@ static int run_nop_canonicalization(const unsigned char *pixel_type, int *pixel_
     {
         if (pixel_type[i] == PIXEL_CODE && pixel_instr[i] == INSTR_NONE)
         {
+            // normalize unknown op to NOP so emit path stays deterministic
             pixel_instr[i] = INSTR_NOP;
             changes++;
         }
@@ -62,6 +63,7 @@ static int run_reachability_crop(unsigned char **pixel_type, int **pixel_instr, 
     int h = *height;
     int count = w * h;
     int queue_cap = count * 8;
+    // x,y,dir visited to stop infinite loops from cycling programs
     unsigned char *visited_cells = (unsigned char *)calloc((size_t)count, sizeof(unsigned char));
     unsigned char *visited_state = (unsigned char *)calloc((size_t)count * 4, sizeof(unsigned char));
     WorkItem *queue = (WorkItem *)malloc((size_t)queue_cap * sizeof(WorkItem));
@@ -136,6 +138,7 @@ static int run_reachability_crop(unsigned char **pixel_type, int **pixel_instr, 
 
         if ((*pixel_type)[idx] == PIXEL_CODE && (instr == INSTR_JZ || instr == INSTR_JNZ))
         {
+            // static reachability explores both branch outcomes conservatively
             int cx = sx;
             int cy = sy;
             move_once(&cx, &cy, next_dir);
@@ -188,6 +191,7 @@ static int run_reachability_crop(unsigned char **pixel_type, int **pixel_instr, 
     int new_w = max_x - min_x + 1;
     int new_h = max_y - min_y + 1;
     int new_count = new_w * new_h;
+    // crop only bounding box of reachable cells so output C becomes smaller
     unsigned char *new_type = (unsigned char *)malloc((size_t)new_count * sizeof(unsigned char));
     int *new_instr = (int *)malloc((size_t)new_count * sizeof(int));
     int *new_data = (int *)malloc((size_t)new_count * sizeof(int));
@@ -254,7 +258,11 @@ int optimize_decoded_program(unsigned char **pixel_type, int **pixel_instr, int 
     if (!config || !config->enabled)
         return 1;
 
+    if (config->level <= 0)
+        return 1;
+
     int count = (*width) * (*height);
+    // pass 1 is cheap normalization pass before structural changes
     int canonicalized = run_nop_canonicalization(*pixel_type, *pixel_instr, count);
     if (stats)
     {
@@ -265,6 +273,7 @@ int optimize_decoded_program(unsigned char **pixel_type, int **pixel_instr, int 
 
     int before_w = *width;
     int before_h = *height;
+    // pass 2 removes unreachable border area by reachability crop
     if (!run_reachability_crop(pixel_type, pixel_instr, pixel_data, width, height, stats))
         return 0;
 

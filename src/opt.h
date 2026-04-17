@@ -5,6 +5,7 @@
 
 typedef struct {
     int enabled;
+    int level;
 } OptConfig;
 
 typedef struct {

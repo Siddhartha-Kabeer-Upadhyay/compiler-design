@@ -121,8 +121,17 @@ make
 # Dump pixel decode table
 ./glint input.png --dump
 
-# Compile Glint source image to C
-glint input.png -o output.c # --trace to turn on tracer mode
+# Generate C from a Glint source image
+./glint input.png -o output.c
+
+# Generate C with optimization passes enabled
+./glint input.png --opt -o output_opt.c
+
+# Explicit optimization level (0 = off, 1 = current safe passes)
+./glint input.png --opt-level 1 -o output_opt.c
+
+# Emit optimization report to stdout during code generation
+./glint input.png --opt --opt-report -o output_opt.c
 
 # Compile the generated C code
 gcc output.c -o program
@@ -130,6 +139,12 @@ gcc output.c -o program
 # Run the program
 ./program
 ```
+
+### Codegen Notes
+
+- `--opt` is only valid with `-o` and currently maps to safe optimization passes.
+- `--opt-level` is currently `0` or `1`.
+- `--opt-report` prints pass and size stats (passes, changes, removed cells, dimensions before/after).
 
 ---
 

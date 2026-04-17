@@ -188,6 +188,45 @@ expect_failure "cli-unknown-flag" "$GLINT_BIN" "$ROOT_DIR/image3.png" --wat
 expect_failure "cli-steplimit-with-run" "$GLINT_BIN" "$ROOT_DIR/image3.png" --run 10
 expect_failure "cli-missing-o-value" "$GLINT_BIN" "$ROOT_DIR/image3.png" -o
 expect_failure "cli-opt-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt
+expect_failure "cli-opt-level-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 1
+expect_failure "cli-opt-report-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-report
+expect_failure "cli-invalid-opt-level" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 9 -o "$TMP_DIR/bad.c"
+
+opt_report_out="$TMP_DIR/opt_report.out"
+if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt --opt-report -o "$TMP_DIR/report.c" >"$opt_report_out" 2>"$TMP_DIR/opt_report.err"; then
+  if grep -q "OPT_REPORT: passes=" "$opt_report_out"; then
+    echo "PASS [cli-opt-report-output]"
+  else
+    echo "FAIL [cli-opt-report-output]: missing report output"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [cli-opt-report-output]: command failed"
+  failures=$((failures + 1))
+fi
+
+if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 0 -o "$TMP_DIR/level0.c" >/dev/null 2>"$TMP_DIR/level0.err"; then
+  if gcc "$TMP_DIR/level0.c" -o "$TMP_DIR/level0.bin" >/dev/null 2>"$TMP_DIR/level0.gcc.err"; then
+    level0_stdout="$TMP_DIR/level0.out"
+    level0_stderr="$TMP_DIR/level0.stderr"
+    interp_stdout="$TMP_DIR/level0.interp.out"
+    interp_stderr="$TMP_DIR/level0.interp.stderr"
+    level0_exit=$(run_and_capture "$level0_stdout" "$level0_stderr" "$TMP_DIR/level0.bin")
+    interp_exit=$(run_and_capture "$interp_stdout" "$interp_stderr" "$GLINT_BIN" "$ROOT_DIR/image3.png")
+    if [[ "$level0_exit" == "$interp_exit" ]] && cmp -s "$level0_stdout" "$interp_stdout" && cmp -s "$level0_stderr" "$interp_stderr"; then
+      echo "PASS [cli-opt-level-0-parity]"
+    else
+      echo "FAIL [cli-opt-level-0-parity]: output or exit mismatch"
+      failures=$((failures + 1))
+    fi
+  else
+    echo "FAIL [cli-opt-level-0-parity]: generated C compilation failed"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [cli-opt-level-0-parity]: codegen failed"
+  failures=$((failures + 1))
+fi
 
 if [[ "$failures" -ne 0 ]]; then
   printf '\nParity tests failed: %s\n' "$failures"

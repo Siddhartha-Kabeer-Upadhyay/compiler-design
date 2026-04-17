@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [-o output.c]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [--opt-level 0|1] [--opt-report] [-o output.c]\n", argv[0]);
         return 1;
     }
 
@@ -24,6 +24,8 @@ int main(int argc, char *argv[])
     int run_mode = 0;
     int codegen_mode = 0;
     int opt_mode = 0;
+    int opt_report = 0;
+    int opt_level = -1;
     const char *codegen_out = NULL;
     int step_limit = 1000; // default value 
     int step_limit_set = 0;
@@ -71,6 +73,27 @@ int main(int argc, char *argv[])
         {
             opt_mode = 1;
         }
+        else if (strcmp(argv[i], "--opt-report") == 0)
+        {
+            opt_report = 1;
+        }
+        else if (strcmp(argv[i], "--opt-level") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                fprintf(stderr, "Error: Missing value after --opt-level\n");
+                return 1;
+            }
+
+            char *end = NULL;
+            long parsed_level = strtol(argv[++i], &end, 10);
+            if (*end != '\0' || parsed_level < 0 || parsed_level > 1)
+            {
+                fprintf(stderr, "Error: Invalid --opt-level '%s' (expected 0 or 1)\n", argv[i]);
+                return 1;
+            }
+            opt_level = (int)parsed_level;
+        }
         else if (argv[i][0] == '-')
         {
             fprintf(stderr, "Error: Unknown flag '%s'\n", argv[i]);
@@ -110,6 +133,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (opt_report && !codegen_mode)
+    {
+        fprintf(stderr, "Error: --opt-report can only be used with -o\n");
+        return 1;
+    }
+
+    if (opt_level >= 0 && !codegen_mode)
+    {
+        fprintf(stderr, "Error: --opt-level can only be used with -o\n");
+        return 1;
+    }
+
     int width, height, channels;
     unsigned char *img = stbi_load(argv[1], &width, &height, &channels, 4);
 
@@ -123,13 +158,29 @@ int main(int argc, char *argv[])
     if (codegen_mode)
     {
         CodegenOptions cg_options;
-        cg_options.enable_opt = opt_mode;
+        cg_options.enable_opt = opt_mode || (opt_level > 0);
+        cg_options.opt_level = (opt_level >= 0) ? opt_level : (cg_options.enable_opt ? 1 : 0);
+        cg_options.opt_report = opt_report;
+        // codegen path exits early because run/trace modes are different pipeline
         int ok = generate_c_from_image(codegen_out, img, width, height, &cg_options);
         stbi_image_free(img);
         if (!ok)
         {
             fprintf(stderr, "Error: Failed to generate C file '%s'\n", codegen_out);
             return 1;
+        }
+
+        if (opt_report)
+        {
+            printf("OPT_REPORT: passes=%d changes=%d nops=%d removed=%d dims=%dx%d->%dx%d\n",
+                   cg_options.opt_stats.passes_run,
+                   cg_options.opt_stats.changes,
+                   cg_options.opt_stats.canonicalized_nops,
+                   cg_options.opt_stats.removed_cells,
+                   cg_options.opt_stats.width_before,
+                   cg_options.opt_stats.height_before,
+                   cg_options.opt_stats.width_after,
+                   cg_options.opt_stats.height_after);
         }
         return 0;
     }

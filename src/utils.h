@@ -1,6 +1,6 @@
 #ifndef UTILS_H
 
-#define UTILS_H // to remove max and min repitition everytime we need the values
+#define UTILS_H
 
 #include "instruction.h"
 
