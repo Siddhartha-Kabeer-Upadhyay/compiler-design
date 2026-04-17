@@ -19,6 +19,7 @@ Thumbs.db
 
 # Extra Documentation folder
 docs/
+scripts/
 
 # Test images 
 *.png

@@ -5,6 +5,9 @@ OUT = glint
 
 all: $(OUT)
 
+test: $(OUT)
+	./scripts/test_parity.sh
+
 $(OUT): $(SRC)
 	$(CC) $(CFLAGS) -o $(OUT) $(SRC) -lm
 
