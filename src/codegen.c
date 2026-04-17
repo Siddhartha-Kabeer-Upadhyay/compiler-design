@@ -358,7 +358,9 @@ static int emit_runtime(FILE *out)
 int generate_c_from_image(const char *output_path, const unsigned char *img, int width, int height,
                           const CodegenOptions *options)
 {
-    int count = width * height;
+    int work_width = width;
+    int work_height = height;
+    int count = work_width * work_height;
     unsigned char *pixel_type = (unsigned char *)malloc((size_t)count * sizeof(unsigned char));
     int *pixel_instr = (int *)malloc((size_t)count * sizeof(int));
     int *pixel_data = (int *)malloc((size_t)count * sizeof(int));
@@ -383,7 +385,8 @@ int generate_c_from_image(const char *output_path, const unsigned char *img, int
     }
 
     opt_config.enabled = (options && options->enable_opt) ? 1 : 0;
-    if (!optimize_decoded_program(pixel_type, pixel_instr, pixel_data, count, &opt_config, &opt_stats))
+    if (!optimize_decoded_program(&pixel_type, &pixel_instr, &pixel_data,
+                                  &work_width, &work_height, &opt_config, &opt_stats))
     {
         free(pixel_type);
         free(pixel_instr);
@@ -400,7 +403,7 @@ int generate_c_from_image(const char *output_path, const unsigned char *img, int
         return 0;
     }
 
-    if (!emit_pixel_arrays(out, pixel_type, pixel_instr, pixel_data, width, height))
+    if (!emit_pixel_arrays(out, pixel_type, pixel_instr, pixel_data, work_width, work_height))
     {
         fclose(out);
         free(pixel_type);

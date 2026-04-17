@@ -1,28 +1,12 @@
 #include "tracer.h"
+#include "utils.h"
 
-static int instr_is_skip(Instruction instr) 
-{ return instr == INSTR_RIGHT_SKIP || instr == INSTR_DOWN_SKIP || instr == INSTR_LEFT_SKIP || instr == INSTR_UP_SKIP; }
+static int tracer_in_bounds(TracerState *state, int width, int height)
+{ return in_bounds(state->x, state->y, width, height); }
 
-static int in_bounds(TracerState *state, int width, int height) 
-{ return !(state->x < 0 || state->x >= width || state->y < 0 || state->y >= height); }
-
-static void move_once(TracerState *state)
+static void tracer_move_once(TracerState *state)
 {
-    switch (state->dir)
-    {
-        case DIR_RIGHT:
-			state->x++; 
-			break;
-        case DIR_DOWN:
-			state->y++; 
-			break;
-        case DIR_LEFT:
-			state->x--; 
-			break;
-        case DIR_UP:
-			state->y--; 
-			break;
-    }
+    move_once(&state->x, &state->y, state->dir);
 }
 
 TracerState tracer_init(void)
@@ -82,9 +66,9 @@ void tracer_step(TracerState *state, DecodedPixel pixel)
 
 int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
 {
-    move_once(state); // every pixel moves the tracer but only code type can have skip jumps
+    tracer_move_once(state); // every pixel moves the tracer but only code type can have skip jumps
 
-    if (!in_bounds(state, width, height))
+    if (!tracer_in_bounds(state, width, height))
     {
         state->error = 1;
         return 0;
@@ -92,9 +76,9 @@ int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
 
     if (pixel.type == PIXEL_CODE && instr_is_skip(pixel.instr))
     {
-        move_once(state);
+        tracer_move_once(state);
 
-        if (!in_bounds(state, width, height))
+        if (!tracer_in_bounds(state, width, height))
         {
             state->error = 1;
             return 0;
@@ -108,9 +92,9 @@ int tracer_move_conditional(TracerState *state, int width, int height, int shoul
 {
     if (!should_move) return 1;
 
-    move_once(state);
+    tracer_move_once(state);
 
-    if (!in_bounds(state, width, height))
+    if (!tracer_in_bounds(state, width, height))
     {
         state->error = 1;
         return 0;
