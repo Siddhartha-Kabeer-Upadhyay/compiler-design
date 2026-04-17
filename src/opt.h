@@ -11,8 +11,9 @@ typedef struct {
 typedef struct {
     int passes_run;
     int changes;
-    int canonicalized_nops;
-    int canonicalized_dirs;
+    int can_nops;
+    int can_dirs;
+    int lit_ops;
     int removed_cells;
     int width_before;
     int height_before;

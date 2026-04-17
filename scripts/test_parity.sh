@@ -33,6 +33,51 @@ run_and_capture() {
 
 failures=0
 
+generate_store_load_fixture() {
+  local out_png="$1"
+  python3 - "$out_png" <<'PY'
+import colorsys
+import struct
+import zlib
+import binascii
+import sys
+
+out_path = sys.argv[1]
+
+def hsv_to_rgb(h, s, v):
+    r, g, b = colorsys.hsv_to_rgb(h / 360.0, s / 100.0, v / 255.0)
+    return int(round(r * 255)), int(round(g * 255)), int(round(b * 255))
+
+def png_chunk(tag, data):
+    return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", binascii.crc32(tag + data) & 0xFFFFFFFF)
+
+# Program: DATA(7) -> STORE_A -> LOAD_A -> OUT_NUM -> HALT
+data_px = (7, 7, 7, 255)
+store_a_px = (*hsv_to_rgb(228, 100, 120), 255)   # Indigo low-V
+load_a_px = (*hsv_to_rgb(228, 100, 220), 255)    # Indigo high-V
+out_num_px = (*hsv_to_rgb(324, 100, 120), 255)   # Pink low-V
+halt_px = (0, 0, 0, 255)
+
+pixels = [data_px, store_a_px, load_a_px, out_num_px, halt_px]
+width = len(pixels)
+height = 1
+
+raw = bytearray()
+raw.append(0)  # filter byte for row 0
+for r, g, b, a in pixels:
+    raw.extend([r, g, b, a])
+
+ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+idat = zlib.compress(bytes(raw))
+
+with open(out_path, "wb") as f:
+    f.write(b"\x89PNG\r\n\x1a\n")
+    f.write(png_chunk(b"IHDR", ihdr))
+    f.write(png_chunk(b"IDAT", idat))
+    f.write(png_chunk(b"IEND", b""))
+PY
+}
+
 expect_success() {
   local label="$1"
   shift
@@ -217,7 +262,7 @@ fi
 
 l2_report_out="$TMP_DIR/l2_report.out"
 if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 2 --opt-report -o "$TMP_DIR/l2report.c" >"$l2_report_out" 2>"$TMP_DIR/l2_report.err"; then
-  if grep -q "OPT_REPORT: passes=4 changes=1 nops=0 dirs=0 removed=5 dims=4x2->3x1" "$l2_report_out"; then
+  if grep -q "OPT_REPORT: passes=6 changes=1 nops=0 dirs=0 lit=0 removed=5 dims=4x2->3x1" "$l2_report_out"; then
     echo "PASS [cli-opt-level-2-report-image3-values]"
   else
     echo "FAIL [cli-opt-level-2-report-image3-values]: unexpected report values"
@@ -238,7 +283,7 @@ if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt --opt-report -o "$TMP_DIR/report.c"
     failures=$((failures + 1))
   fi
 
-  if grep -q "OPT_REPORT: passes=3 changes=1 nops=0 dirs=0 removed=5 dims=4x2->3x1" "$opt_report_out"; then
+  if grep -q "OPT_REPORT: passes=3 changes=1 nops=0 dirs=0 lit=0 removed=5 dims=4x2->3x1" "$opt_report_out"; then
     echo "PASS [cli-opt-report-image3-values]"
   else
     echo "FAIL [cli-opt-report-image3-values]: unexpected report values"
@@ -270,6 +315,138 @@ if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 0 -o "$TMP_DIR/level0.c" >/de
   fi
 else
   echo "FAIL [cli-opt-level-0-parity]: codegen failed"
+  failures=$((failures + 1))
+fi
+
+store_load_png="$TMP_DIR/store_load_fixture.png"
+generate_store_load_fixture "$store_load_png"
+
+sl_l1_report="$TMP_DIR/store_load_l1_report.out"
+sl_l2_report="$TMP_DIR/store_load_l2_report.out"
+
+if "$GLINT_BIN" "$store_load_png" --opt-level 1 --opt-report -o "$TMP_DIR/store_load_l1.c" >"$sl_l1_report" 2>"$TMP_DIR/store_load_l1.err" && \
+   "$GLINT_BIN" "$store_load_png" --opt-level 2 --opt-report -o "$TMP_DIR/store_load_l2.c" >"$sl_l2_report" 2>"$TMP_DIR/store_load_l2.err"; then
+  if grep -q "OPT_REPORT: passes=3 changes=0 nops=0 dirs=0 lit=0 removed=0 dims=5x1->5x1" "$sl_l1_report"; then
+    echo "PASS [opt-store-load-level1-report]"
+  else
+    echo "FAIL [opt-store-load-level1-report]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$sl_l1_report")"
+    failures=$((failures + 1))
+  fi
+
+  if grep -q "OPT_REPORT: passes=6 changes=2 nops=2 dirs=0 lit=0 removed=0 dims=5x1->5x1" "$sl_l2_report"; then
+    echo "PASS [opt-store-load-level2-report]"
+  else
+    echo "FAIL [opt-store-load-level2-report]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$sl_l2_report")"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [opt-store-load-reports]: codegen/report command failed"
+  failures=$((failures + 1))
+fi
+
+lit_png="$TMP_DIR/lit_fold_fixture.png"
+python3 - "$lit_png" <<'PY'
+import colorsys
+import struct
+import zlib
+import binascii
+import sys
+
+out_path = sys.argv[1]
+
+def hsv_to_rgb(h, s, v):
+    r, g, b = colorsys.hsv_to_rgb(h / 360.0, s / 100.0, v / 255.0)
+    return int(round(r * 255)), int(round(g * 255)), int(round(b * 255))
+
+def chunk(tag, data):
+    return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", binascii.crc32(tag + data) & 0xFFFFFFFF)
+
+# DATA(6), DATA(7), ADD, OUT_NUM, HALT
+px = [
+    (6, 6, 6, 255),
+    (7, 7, 7, 255),
+    (*hsv_to_rgb(132, 100, 120), 255),  # Teal low-V => ADD
+    (*hsv_to_rgb(324, 100, 120), 255),  # Pink low-V => OUT_NUM
+    (0, 0, 0, 255),
+]
+
+w, h = len(px), 1
+raw = bytearray([0])
+for r, g, b, a in px:
+    raw.extend([r, g, b, a])
+
+ihdr = struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)
+idat = zlib.compress(bytes(raw))
+
+with open(out_path, "wb") as f:
+    f.write(b"\x89PNG\r\n\x1a\n")
+    f.write(chunk(b"IHDR", ihdr))
+    f.write(chunk(b"IDAT", idat))
+    f.write(chunk(b"IEND", b""))
+PY
+
+lit_l1_report="$TMP_DIR/lit_l1_report.out"
+lit_l2_report="$TMP_DIR/lit_l2_report.out"
+
+if "$GLINT_BIN" "$lit_png" --opt-level 1 --opt-report -o "$TMP_DIR/lit_l1.c" >"$lit_l1_report" 2>"$TMP_DIR/lit_l1.err" && \
+   "$GLINT_BIN" "$lit_png" --opt-level 2 --opt-report -o "$TMP_DIR/lit_l2.c" >"$lit_l2_report" 2>"$TMP_DIR/lit_l2.err"; then
+  if grep -q "OPT_REPORT: passes=3 changes=0 nops=0 dirs=0 lit=0 removed=0 dims=5x1->5x1" "$lit_l1_report"; then
+    echo "PASS [opt-lit-level1-report]"
+  else
+    echo "FAIL [opt-lit-level1-report]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$lit_l1_report")"
+    failures=$((failures + 1))
+  fi
+
+  if grep -q "OPT_REPORT: passes=6 changes=1 nops=0 dirs=0 lit=1 removed=0 dims=5x1->5x1" "$lit_l2_report"; then
+    echo "PASS [opt-lit-level2-report]"
+  else
+    echo "FAIL [opt-lit-level2-report]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$lit_l2_report")"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [opt-lit-reports]: codegen/report command failed"
+  failures=$((failures + 1))
+fi
+
+if gcc "$TMP_DIR/lit_l2.c" -o "$TMP_DIR/lit_l2.bin" >/dev/null 2>"$TMP_DIR/lit_l2.gcc.err"; then
+  lit_interp_out="$TMP_DIR/lit_interp.out"
+  lit_interp_err="$TMP_DIR/lit_interp.err"
+  lit_gen_out="$TMP_DIR/lit_gen.out"
+  lit_gen_err="$TMP_DIR/lit_gen.err"
+  lit_interp_exit=$(run_and_capture "$lit_interp_out" "$lit_interp_err" "$GLINT_BIN" "$lit_png")
+  lit_gen_exit=$(run_and_capture "$lit_gen_out" "$lit_gen_err" "$TMP_DIR/lit_l2.bin")
+
+  if [[ "$lit_interp_exit" == "$lit_gen_exit" ]] && cmp -s "$lit_interp_out" "$lit_gen_out" && cmp -s "$lit_interp_err" "$lit_gen_err"; then
+    echo "PASS [opt-lit-level2-parity]"
+  else
+    echo "FAIL [opt-lit-level2-parity]: output or exit mismatch"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [opt-lit-level2-parity]: generated C compilation failed"
+  failures=$((failures + 1))
+fi
+
+if gcc "$TMP_DIR/store_load_l2.c" -o "$TMP_DIR/store_load_l2.bin" >/dev/null 2>"$TMP_DIR/store_load_l2.gcc.err"; then
+  sl_interp_out="$TMP_DIR/store_load_interp.out"
+  sl_interp_err="$TMP_DIR/store_load_interp.err"
+  sl_gen_out="$TMP_DIR/store_load_gen.out"
+  sl_gen_err="$TMP_DIR/store_load_gen.err"
+  sl_interp_exit=$(run_and_capture "$sl_interp_out" "$sl_interp_err" "$GLINT_BIN" "$store_load_png")
+  sl_gen_exit=$(run_and_capture "$sl_gen_out" "$sl_gen_err" "$TMP_DIR/store_load_l2.bin")
+
+  if [[ "$sl_interp_exit" == "$sl_gen_exit" ]] && cmp -s "$sl_interp_out" "$sl_gen_out" && cmp -s "$sl_interp_err" "$sl_gen_err"; then
+    echo "PASS [opt-store-load-level2-parity]"
+  else
+    echo "FAIL [opt-store-load-level2-parity]: output or exit mismatch"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [opt-store-load-level2-parity]: generated C compilation failed"
   failures=$((failures + 1))
 fi
 

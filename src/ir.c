@@ -3,58 +3,58 @@
 
 #include <stdlib.h>
 
-int ir_from_image(const unsigned char *img, int width, int height, IRProgram *out_program)
+int ir_from_image(const unsigned char *img, int w, int h, IRProgram *out)
 {
-    if (!img || !out_program || width <= 0 || height <= 0)
+    if (!img || !out || w <= 0 || h <= 0)
         return 0;
 
-    int count = width * height;
+    int n = w * h;
     // separate arrays keep optimizer mutation simple later
-    unsigned char *pixel_type = (unsigned char *)malloc((size_t)count * sizeof(unsigned char));
-    int *pixel_instr = (int *)malloc((size_t)count * sizeof(int));
-    int *pixel_data = (int *)malloc((size_t)count * sizeof(int));
+    unsigned char *type = (unsigned char *)malloc((size_t)n * sizeof(unsigned char));
+    int *instr = (int *)malloc((size_t)n * sizeof(int));
+    int *data = (int *)malloc((size_t)n * sizeof(int));
 
-    if (!pixel_type || !pixel_instr || !pixel_data)
+    if (!type || !instr || !data)
     {
-        free(pixel_type);
-        free(pixel_instr);
-        free(pixel_data);
+        free(type);
+        free(instr);
+        free(data);
         return 0;
     }
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < n; i++)
     {
         // decode once here to avoid doing same work in many passes
         int idx = i * 4;
         DecodedPixel pixel = decode_pixel(img[idx + 0], img[idx + 1], img[idx + 2], img[idx + 3]);
-        pixel_type[i] = (unsigned char)pixel.type;
-        pixel_instr[i] = (int)pixel.instr;
-        pixel_data[i] = pixel.data_value;
+        type[i] = (unsigned char)pixel.type;
+        instr[i] = (int)pixel.instr;
+        data[i] = pixel.data_value;
     }
 
-    out_program->width = width;
-    out_program->height = height;
-    out_program->count = count;
-    out_program->pixel_type = pixel_type;
-    out_program->pixel_instr = pixel_instr;
-    out_program->pixel_data = pixel_data;
+    out->width = w;
+    out->height = h;
+    out->count = n;
+    out->pixel_type = type;
+    out->pixel_instr = instr;
+    out->pixel_data = data;
 
     return 1;
 }
 
-void ir_free(IRProgram *program)
+void ir_free(IRProgram *ir)
 {
-    if (!program)
+    if (!ir)
         return;
 
-    free(program->pixel_type);
-    free(program->pixel_instr);
-    free(program->pixel_data);
+    free(ir->pixel_type);
+    free(ir->pixel_instr);
+    free(ir->pixel_data);
 
-    program->pixel_type = NULL;
-    program->pixel_instr = NULL;
-    program->pixel_data = NULL;
-    program->width = 0;
-    program->height = 0;
-    program->count = 0;
+    ir->pixel_type = NULL;
+    ir->pixel_instr = NULL;
+    ir->pixel_data = NULL;
+    ir->width = 0;
+    ir->height = 0;
+    ir->count = 0;
 }

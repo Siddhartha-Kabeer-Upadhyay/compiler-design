@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-static int emit_header(FILE *out, int width, int height, int count)
+static int emit_head(FILE *out, int w, int h, int n)
 {
     if (fprintf(out,
                 "#include <stdio.h>\n"
@@ -14,36 +14,36 @@ static int emit_header(FILE *out, int width, int height, int count)
                 "#define PIXEL_COUNT %d\n"
                 "#define STACK_MAX 1024\n\n"
                 "static const unsigned char pixel_type[PIXEL_COUNT] = {\n",
-                width, height, count) < 0)
+                w, h, n) < 0)
         return 0;
 
     return 1;
 }
 
-static int emit_pixel_arrays(FILE *out, const unsigned char *pixel_type, const int *pixel_instr,
-                             const int *pixel_data, int width, int height)
+static int emit_tabs(FILE *out, const unsigned char *type, const int *instr,
+                     const int *data, int w, int h)
 {
-    int count = width * height;
+    int n = w * h;
 
-    if (!emit_header(out, width, height, count)) return 0;
+    if (!emit_head(out, w, h, n)) return 0;
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < n; i++)
     {
-        if (fprintf(out, "  %d%s", (int)pixel_type[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", (int)type[i], (i + 1 == n) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\nstatic const int pixel_instr[PIXEL_COUNT] = {\n") < 0) return 0;
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < n; i++)
     {
-        if (fprintf(out, "  %d%s", pixel_instr[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", instr[i], (i + 1 == n) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\nstatic const int pixel_data[PIXEL_COUNT] = {\n") < 0) return 0;
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < n; i++)
     {
-        if (fprintf(out, "  %d%s", pixel_data[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", data[i], (i + 1 == n) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\n") < 0) return 0;
@@ -51,7 +51,7 @@ static int emit_pixel_arrays(FILE *out, const unsigned char *pixel_type, const i
     return 1;
 }
 
-static int emit_runtime(FILE *out)
+static int emit_rt(FILE *out)
 {
     if (fprintf(out,
                 "static int in_bounds(int x, int y)\n"
@@ -358,8 +358,8 @@ int generate_c_from_image(const char *output_path, const unsigned char *img, int
                           CodegenOptions *options)
 {
     IRProgram ir;
-    OptConfig opt_config;
-    OptStats opt_stats;
+    OptConfig cfg;
+    OptStats st;
     // defaulting rules keep old cli behavior and new flags both working
     int opt_enabled = (options && options->enable_opt) ? 1 : 0;
     int opt_level = (options && options->opt_level > 0) ? options->opt_level : (opt_enabled ? 1 : 0);
@@ -367,17 +367,17 @@ int generate_c_from_image(const char *output_path, const unsigned char *img, int
     if (!ir_from_image(img, width, height, &ir))
         return 0;
 
-    opt_config.enabled = opt_enabled;
-    opt_config.level = opt_level;
+    cfg.enabled = opt_enabled;
+    cfg.level = opt_level;
     if (!optimize_decoded_program(&ir.pixel_type, &ir.pixel_instr, &ir.pixel_data,
-                                  &ir.width, &ir.height, &opt_config, &opt_stats))
+                                  &ir.width, &ir.height, &cfg, &st))
     {
         ir_free(&ir);
         return 0;
     }
 
     if (options)
-        options->opt_stats = opt_stats;
+        options->opt_stats = st;
 
     FILE *out = fopen(output_path, "w");
     if (!out)
@@ -386,14 +386,14 @@ int generate_c_from_image(const char *output_path, const unsigned char *img, int
         return 0;
     }
 
-    if (!emit_pixel_arrays(out, ir.pixel_type, ir.pixel_instr, ir.pixel_data, ir.width, ir.height))
+    if (!emit_tabs(out, ir.pixel_type, ir.pixel_instr, ir.pixel_data, ir.width, ir.height))
     {
         fclose(out);
         ir_free(&ir);
         return 0;
     }
 
-    if (!emit_runtime(out))
+    if (!emit_rt(out))
     {
         fclose(out);
         ir_free(&ir);

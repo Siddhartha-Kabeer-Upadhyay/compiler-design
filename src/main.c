@@ -172,11 +172,12 @@ int main(int argc, char *argv[])
 
         if (opt_report)
         {
-            printf("OPT_REPORT: passes=%d changes=%d nops=%d dirs=%d removed=%d dims=%dx%d->%dx%d\n",
+            printf("OPT_REPORT: passes=%d changes=%d nops=%d dirs=%d lit=%d removed=%d dims=%dx%d->%dx%d\n",
                    cg_options.opt_stats.passes_run,
                    cg_options.opt_stats.changes,
-                   cg_options.opt_stats.canonicalized_nops,
-                   cg_options.opt_stats.canonicalized_dirs,
+                   cg_options.opt_stats.can_nops,
+                   cg_options.opt_stats.can_dirs,
+                   cg_options.opt_stats.lit_ops,
                    cg_options.opt_stats.removed_cells,
                    cg_options.opt_stats.width_before,
                    cg_options.opt_stats.height_before,
