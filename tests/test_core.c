@@ -54,48 +54,71 @@ static void test_decode_precedence(void)
 static void test_runtime_core(void)
 {
     RuntimeState rt;
+    RouteEffect fx;
     runtime_init(&rt);
 
     DecodedPixel d2 = { PIXEL_DATA, INSTR_NONE, 2 };
     DecodedPixel d3 = { PIXEL_DATA, INSTR_NONE, 3 };
+    DecodedPixel d5 = { PIXEL_DATA, INSTR_NONE, 5 };
+    DecodedPixel d7 = { PIXEL_DATA, INSTR_NONE, 7 };
     DecodedPixel add = { PIXEL_CODE, INSTR_ADD, 0 };
     DecodedPixel jz = { PIXEL_CODE, INSTR_JZ, 0 };
     DecodedPixel div = { PIXEL_CODE, INSTR_DIV, 0 };
+    DecodedPixel sc = { PIXEL_CODE, INSTR_STORE_C, 0 };
+    DecodedPixel lc = { PIXEL_CODE, INSTR_LOAD_C, 0 };
+    DecodedPixel sd = { PIXEL_CODE, INSTR_STORE_D, 0 };
+    DecodedPixel ld = { PIXEL_CODE, INSTR_LOAD_D, 0 };
 
-    expect_int("runtime-push-2", execute_pixel(&rt, d2), EXEC_OK);
-    expect_int("runtime-push-3", execute_pixel(&rt, d3), EXEC_OK);
-    expect_int("runtime-add", execute_pixel(&rt, add), EXEC_OK);
+    expect_int("runtime-push-2", execute_pixel(&rt, d2, &fx), EXEC_OK);
+    expect_int("runtime-push-3", execute_pixel(&rt, d3, &fx), EXEC_OK);
+    expect_int("runtime-add", execute_pixel(&rt, add, &fx), EXEC_OK);
     expect_int("runtime-sp-after-add", rt.sp, 1);
     expect_int("runtime-top-after-add", rt.stack[rt.sp - 1], 5);
 
-    expect_int("runtime-jz-pop", execute_pixel(&rt, jz), EXEC_OK);
-    expect_int("runtime-jz-flag", rt.last_conditional_jump, 0);
+    expect_int("runtime-jz-pop", execute_pixel(&rt, jz, &fx), EXEC_OK);
+    expect_int("runtime-jz-flag", fx.do_cond, 0);
     expect_int("runtime-sp-after-jz", rt.sp, 0);
 
-    expect_int("runtime-div-underflow", execute_pixel(&rt, div), EXEC_ERR_STACK_UNDERFLOW);
+    expect_int("runtime-div-underflow", execute_pixel(&rt, div, &fx), EXEC_ERR_STACK_UNDERFLOW);
 
     DecodedPixel d4 = { PIXEL_DATA, INSTR_NONE, 4 };
     DecodedPixel d0 = { PIXEL_DATA, INSTR_NONE, 0 };
-    expect_int("runtime-push-4", execute_pixel(&rt, d4), EXEC_OK);
-    expect_int("runtime-push-0", execute_pixel(&rt, d0), EXEC_OK);
-    expect_int("runtime-div-zero", execute_pixel(&rt, div), EXEC_ERR_DIV_ZERO);
+    expect_int("runtime-push-4", execute_pixel(&rt, d4, &fx), EXEC_OK);
+    expect_int("runtime-push-0", execute_pixel(&rt, d0, &fx), EXEC_OK);
+    expect_int("runtime-div-zero", execute_pixel(&rt, div, &fx), EXEC_ERR_DIV_ZERO);
+
+    expect_int("runtime-push-5", execute_pixel(&rt, d5, &fx), EXEC_OK);
+    expect_int("runtime-store-c", execute_pixel(&rt, sc, &fx), EXEC_OK);
+    expect_int("runtime-load-c", execute_pixel(&rt, lc, &fx), EXEC_OK);
+    expect_int("runtime-top-c", rt.stack[rt.sp - 1], 5);
+
+    expect_int("runtime-push-7", execute_pixel(&rt, d7, &fx), EXEC_OK);
+    expect_int("runtime-store-d", execute_pixel(&rt, sd, &fx), EXEC_OK);
+    expect_int("runtime-load-d", execute_pixel(&rt, ld, &fx), EXEC_OK);
+    expect_int("runtime-top-d", rt.stack[rt.sp - 1], 7);
 }
 
 static void test_tracer_moves(void)
 {
     TracerState t = tracer_init();
-    DecodedPixel right_skip = { PIXEL_CODE, INSTR_RIGHT_SKIP, 0 };
-    tracer_step(&t, right_skip);
-    expect_int("tracer-move-skip-ok", tracer_move(&t, 6, 1, right_skip), 1);
+    RouteEffect fx;
+    route_reset(&fx);
+    fx.set_dir = 1;
+    fx.dir = DIR_RIGHT;
+    fx.do_skip = 1;
+
+    expect_int("tracer-move-skip-ok", tracer_apply(&t, 6, 1, &fx), 1);
     expect_int("tracer-x-after-skip", t.x, 2);
     expect_int("tracer-y-after-skip", t.y, 0);
 
-    expect_int("tracer-cond-move-ok", tracer_move_conditional(&t, 6, 1, 1), 1);
-    expect_int("tracer-x-after-cond", t.x, 3);
+    route_reset(&fx);
+    fx.do_cond = 1;
+    expect_int("tracer-cond-move-ok", tracer_apply(&t, 6, 1, &fx), 1);
+    expect_int("tracer-x-after-cond", t.x, 4);
 
     TracerState t2 = tracer_init();
-    DecodedPixel data = { PIXEL_DATA, INSTR_NONE, 0 };
-    expect_int("tracer-oob", tracer_move(&t2, 1, 1, data), 0);
+    route_reset(&fx);
+    expect_int("tracer-oob", tracer_apply(&t2, 1, 1, &fx), 0);
     expect_int("tracer-oob-flag", t2.error, 1);
 }
 

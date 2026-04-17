@@ -1,7 +1,7 @@
 #ifndef TRACER_H
 
 #define TRACER_H
-#include "instruction.h" // for directions and DecodedPixel
+#include "runtime.h"
 
 typedef enum
 {
@@ -28,9 +28,7 @@ typedef struct
 } TracedStep;
 
 TracerState tracer_init(void);
-void tracer_step(TracerState *state, DecodedPixel pixel);
-int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel);
-int tracer_move_conditional(TracerState *state, int width, int height, int should_move);
+int tracer_apply(TracerState *st, int w, int h, const RouteEffect *fx);
 const char* direction_name(Direction dir);
 
 #endif

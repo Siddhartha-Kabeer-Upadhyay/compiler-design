@@ -21,15 +21,29 @@ typedef struct
     int sp; // stack pointer for next free index
     int reg_a;
     int reg_b;
-    int last_conditional_jump;
+    int reg_c;
+    int reg_d;
 } RuntimeState;
+
+typedef struct
+{
+    int set_dir;
+    int dir;
+    int do_skip;
+    int do_cond;
+    int do_tp;
+    int tp_x;
+    int tp_y;
+    int tp_dir;
+} RouteEffect;
 
 void runtime_init(RuntimeState *rt);
 int runtime_push(RuntimeState *rt, int value);
 int runtime_pop(RuntimeState *rt, int *out);
 int runtime_peek(RuntimeState *rt, int *out);
+void route_reset(RouteEffect *fx);
 
-ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel);
+ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx);
 const char* exec_status_name(ExecStatus s);
 
 #endif

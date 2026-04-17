@@ -40,6 +40,10 @@ typedef enum {
     INSTR_LOAD_A,       // Indigo, V >= 128
     INSTR_STORE_B,      // Violet, V < 128
     INSTR_LOAD_B,       // Violet, V >= 128
+    INSTR_STORE_C,
+    INSTR_LOAD_C,
+    INSTR_STORE_D,
+    INSTR_LOAD_D,
 
     // Conditionals (Hue 264-288)
     INSTR_JNZ,          // Purple, V < 128

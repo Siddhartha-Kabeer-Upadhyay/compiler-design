@@ -74,6 +74,8 @@ static int emit_rt(FILE *out)
                 "  int sp = 0;\n"
                 "  int reg_a = 0;\n"
                 "  int reg_b = 0;\n"
+                "  int reg_c = 0;\n"
+                "  int reg_d = 0;\n"
                 "  int x = 0;\n"
                 "  int y = 0;\n"
                 "  int dir = 0;\n"
@@ -221,6 +223,26 @@ static int emit_rt(FILE *out)
                 "\n"
                 "        case %d:\n"
                 "          if (sp <= 0) { fprintf(stderr, \"EXEC_ERROR: ERR_STACK_UNDERFLOW\\n\"); return 1; }\n"
+                "          reg_c = stack[--sp];\n"
+                "          break;\n"
+                "\n"
+                "        case %d:\n"
+                "          if (sp >= STACK_MAX) { fprintf(stderr, \"EXEC_ERROR: ERR_STACK_OVERFLOW\\n\"); return 1; }\n"
+                "          stack[sp++] = reg_c;\n"
+                "          break;\n"
+                "\n"
+                "        case %d:\n"
+                "          if (sp <= 0) { fprintf(stderr, \"EXEC_ERROR: ERR_STACK_UNDERFLOW\\n\"); return 1; }\n"
+                "          reg_d = stack[--sp];\n"
+                "          break;\n"
+                "\n"
+                "        case %d:\n"
+                "          if (sp >= STACK_MAX) { fprintf(stderr, \"EXEC_ERROR: ERR_STACK_OVERFLOW\\n\"); return 1; }\n"
+                "          stack[sp++] = reg_d;\n"
+                "          break;\n"
+                "\n"
+                "        case %d:\n"
+                "          if (sp <= 0) { fprintf(stderr, \"EXEC_ERROR: ERR_STACK_UNDERFLOW\\n\"); return 1; }\n"
                 "          a = stack[--sp];\n"
                 "          conditional_move = (a != 0);\n"
                 "          break;\n"
@@ -260,9 +282,9 @@ static int emit_rt(FILE *out)
                 "\n"
                 "        case %d:\n"
                 "          if (sp > 0)\n"
-                "            printf(\"DEBUG: SP=%%d TOP=%%d A=%%d B=%%d\\n\", sp, stack[sp - 1], reg_a, reg_b);\n"
+                "            printf(\"DEBUG: SP=%%d TOP=%%d A=%%d B=%%d C=%%d D=%%d\\n\", sp, stack[sp - 1], reg_a, reg_b, reg_c, reg_d);\n"
                 "          else\n"
-                "            printf(\"DEBUG: SP=%%d TOP=EMPTY A=%%d B=%%d\\n\", sp, reg_a, reg_b);\n"
+                "            printf(\"DEBUG: SP=%%d TOP=EMPTY A=%%d B=%%d C=%%d D=%%d\\n\", sp, reg_a, reg_b, reg_c, reg_d);\n"
                 "          break;\n"
                 "\n"
                 "        case %d:\n"
@@ -334,6 +356,10 @@ static int emit_rt(FILE *out)
                 INSTR_LOAD_A,
                 INSTR_STORE_B,
                 INSTR_LOAD_B,
+                INSTR_STORE_C,
+                INSTR_LOAD_C,
+                INSTR_STORE_D,
+                INSTR_LOAD_D,
                 INSTR_JNZ,
                 INSTR_JZ,
                 INSTR_IN_NUM,

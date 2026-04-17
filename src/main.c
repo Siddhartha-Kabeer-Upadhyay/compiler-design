@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
     {
         TracerState state = tracer_init();
         RuntimeState rt;
+        RouteEffect fx;
         runtime_init(&rt);
         int step = 0;
         int reached_step_limit = 0;
@@ -252,7 +253,7 @@ int main(int argc, char *argv[])
             unsigned char a = img[idx + 3];
 
             DecodedPixel pixel = decode_pixel(r, g, b, a);
-			ExecStatus exec = execute_pixel(&rt, pixel);
+			ExecStatus exec = execute_pixel(&rt, pixel, &fx);
 			if (exec != EXEC_OK && exec != EXEC_HALT)
 			{
 			    fprintf(stderr, "EXEC_ERROR: %s\n", exec_status_name(exec));
@@ -277,15 +278,13 @@ int main(int argc, char *argv[])
 			    else
 			        printf(" | TOP: EMPTY");
 			
-			    printf(" | SP: %d | A: %d | B: %d", rt.sp, rt.reg_a, rt.reg_b);
+			    printf(" | SP: %d | A: %d | B: %d | C: %d | D: %d", rt.sp, rt.reg_a, rt.reg_b, rt.reg_c, rt.reg_d);
                 printf("\n");
             }
 
-            tracer_step(&state, pixel);
             if (exec == EXEC_HALT) { state.halted = 1; break; } // breaks preemptively for optimization
             if (state.halted || state.error) break; // breaks preemptively for optimization
-            if (!tracer_move(&state, width, height, pixel)) break; // moves pointer else breaks if cannot
-            if (!tracer_move_conditional(&state, width, height, rt.last_conditional_jump)) break;
+            if (!tracer_apply(&state, width, height, &fx)) break;
             step++;
         }
 

@@ -1,19 +1,19 @@
-# Glint
+# Glint Extended
 
 A transpiled esoteric programming language where source code is a PNG image and the output is generated C code.
 
 ---
 
-## What is Glint exactly?
+## What is Glint Extended exactly?
 
 - **Source code** = PNG image
 - **Target code** = C
 - **Instructions** = HSV color values of pixels
 - **Execution** = 2D pointer movement through the image
-- **Memory** = Stack + 2 registers (A, B)
+- **Memory** = Stack + 4 registers (A, B, C, D)
 - **Image Reading** = ``stb_image.h`` stb library
 
-### Glint treats an image as executable space:
+### Glint Extended treats an image as executable space:
 
 - Hue determines instruction category
 - Saturation determines data vs code
@@ -32,7 +32,7 @@ A transpiled esoteric programming language where source code is a PNG image and 
 | R=0, G=0, B=0 | Black | Clean halt, `exit(0)` |
 | S ≤ 20% | Data | Push V (0-255) onto stack |
 | 20% < S ≤ 60% | Base code | Execute base bank instruction |
-| S > 60% | EX code | Execute Glint-ex bank instruction |
+| S > 60% | EX code | Execute Glint Extended bank instruction |
 
 ### Value Modifies Instructions
 
@@ -69,25 +69,25 @@ For CODE pixels (`S > 20%`), Value selects between two variants:
 
 ### EX Bank (`S > 60%`)
 
-EX bank keeps 30 slots using 15 hue bands with V split. Active ops are interleaved as pairs with trap pairs.
+Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 
-| Hue | V < 128 | V >= 128 |
-|-----|---------|----------|
-| 0-24° | JGT | JLT |
-| 24-48° | TRAP_00 | TRAP_01 |
-| 48-72° | CALL | RET |
-| 72-96° | TRAP_02 | TRAP_03 |
-| 96-120° | DUP | OVER |
-| 120-144° | TRAP_04 | TRAP_05 |
-| 144-168° | ROT | ROTR |
-| 168-192° | TRAP_06 | TRAP_07 |
-| 192-216° | READ | WRITE |
-| 216-240° | TRAP_08 | TRAP_09 |
-| 240-264° | AND | OR |
-| 264-288° | TRAP_10 | TRAP_11 |
-| 288-312° | NOT | XOR |
-| 312-336° | TRAP_12 | TRAP_13 |
-| 336-360° | DEPTH | CLEAR |
+| Hue | Color | V < 128 | V ≥ 128 | Stack Effect | Category |
+|-----|-------|---------|----------|--------------|----------|
+| 0-24° | Red | TRAP_00 | TRAP_01 | — | Trap |
+| 24-48° | Orange | TRAP_02 | TRAP_03 | — | Trap |
+| 48-72° | Yellow | TRAP_04 | TRAP_05 | — | Trap |
+| 72-96° | Lime | TRAP_06 | TRAP_07 | — | Trap |
+| 96-120° | Green | DUP | OVER | `[a]→[a,a]` / `[a,b]→[a,b,a]` | Stack |
+| 120-144° | Teal | AND | OR | `[a,b]→[a&b]` / `[a,b]→[a\|b]` | Bitwise |
+| 144-168° | Cyan | NOT | XOR | `[a]→[~a]` / `[a,b]→[a^b]` | Bitwise |
+| 168-192° | Sky | ROT | ROTR | `[a,b,c]→[b,c,a]` / `[a,b,c]→[c,a,b]` | Stack |
+| 192-216° | Blue | READ | WRITE | `[x,y]→[v]` / `[v,x,y]→[]` | Pixel Mem |
+| 216-240° | Indigo | STORE_C | LOAD_C | `[a]→[]` / `[]→[C]` | Register |
+| 240-264° | Violet | STORE_D | LOAD_D | `[a]→[]` / `[]→[D]` | Register |
+| 264-288° | Purple | JGT | JLT | `[a,b]→[]` | Flow |
+| 288-312° | Magenta | CALL | RET | `[...]→[...]` | Call |
+| 312-336° | Pink | TRAP_12 | TRAP_13 | — | Trap |
+| 336-360° | Rose | DEPTH | CLEAR | `[]→[sp]` / `[...]→[]` | Stack State |
 
 ---
 
@@ -115,6 +115,8 @@ EX bank keeps 30 slots using 15 hue bands with V split. Active ops are interleav
 ### Registers
 - A (int)
 - B (int)
+- C (int)
+- D (int)
 
 ---
 
@@ -217,7 +219,7 @@ Execution:
 
 - `instruction.*`: pixel classification and opcode decoding from RGBA/HSV.
 - `runtime.*`: stack/register/math/io semantics and runtime status handling.
-- `tracer.*`: pointer direction updates, movement, skip movement, and bounds errors.
+- `tracer.*`: pointer movement application from route effects and bounds errors.
 - `main.c`: CLI parsing, mode orchestration (`run`, `trace`, `dump`, `codegen`), exit codes.
 - `ir.*`: decoded array representation consumed by optimizer and codegen.
 - `opt.*`: optimization passes by level (`0/1/2`) and optimization stats.

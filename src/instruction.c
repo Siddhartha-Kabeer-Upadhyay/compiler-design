@@ -58,19 +58,19 @@ static Instruction decode_ex(HSV hsv)
     int h = hsv.h;
     int high_v = (hsv.v >= 128);
 
-    if (h < 24) return high_v ? INSTR_JLT : INSTR_JGT;
-    if (h < 48) return high_v ? INSTR_TRAP_01 : INSTR_TRAP_00;
-    if (h < 72) return high_v ? INSTR_RET : INSTR_CALL;
-    if (h < 96) return high_v ? INSTR_TRAP_03 : INSTR_TRAP_02;
+    if (h < 24) return high_v ? INSTR_TRAP_01 : INSTR_TRAP_00;
+    if (h < 48) return high_v ? INSTR_TRAP_03 : INSTR_TRAP_02;
+    if (h < 72) return high_v ? INSTR_TRAP_05 : INSTR_TRAP_04;
+    if (h < 96) return high_v ? INSTR_TRAP_07 : INSTR_TRAP_06;
     if (h < 120) return high_v ? INSTR_OVER : INSTR_DUP;
-    if (h < 144) return high_v ? INSTR_TRAP_05 : INSTR_TRAP_04;
-    if (h < 168) return high_v ? INSTR_ROTR : INSTR_ROT;
-    if (h < 192) return high_v ? INSTR_TRAP_07 : INSTR_TRAP_06;
+    if (h < 144) return high_v ? INSTR_OR : INSTR_AND;
+    if (h < 168) return high_v ? INSTR_XOR : INSTR_NOT;
+    if (h < 192) return high_v ? INSTR_ROTR : INSTR_ROT;
     if (h < 216) return high_v ? INSTR_WRITE : INSTR_READ;
-    if (h < 240) return high_v ? INSTR_TRAP_09 : INSTR_TRAP_08;
-    if (h < 264) return high_v ? INSTR_OR : INSTR_AND;
-    if (h < 288) return high_v ? INSTR_TRAP_11 : INSTR_TRAP_10;
-    if (h < 312) return high_v ? INSTR_XOR : INSTR_NOT;
+    if (h < 240) return high_v ? INSTR_LOAD_C : INSTR_STORE_C;
+    if (h < 264) return high_v ? INSTR_LOAD_D : INSTR_STORE_D;
+    if (h < 288) return high_v ? INSTR_JLT : INSTR_JGT;
+    if (h < 312) return high_v ? INSTR_RET : INSTR_CALL;
     if (h < 336) return high_v ? INSTR_TRAP_13 : INSTR_TRAP_12;
     return high_v ? INSTR_CLEAR : INSTR_DEPTH;
 }
@@ -142,6 +142,10 @@ const char* instruction_name(Instruction instr)
         case INSTR_LOAD_A:     return "LOAD_A";
         case INSTR_STORE_B:    return "STORE_B";
         case INSTR_LOAD_B:     return "LOAD_B";
+        case INSTR_STORE_C:    return "STORE_C";
+        case INSTR_LOAD_C:     return "LOAD_C";
+        case INSTR_STORE_D:    return "STORE_D";
+        case INSTR_LOAD_D:     return "LOAD_D";
         case INSTR_JNZ:        return "JNZ";
         case INSTR_JZ:         return "JZ";
         case INSTR_IN_NUM:     return "IN_NUM";

@@ -7,7 +7,21 @@ void runtime_init(RuntimeState *rt)
     rt->sp = 0;
     rt->reg_a = 0;
     rt->reg_b = 0;
-    rt->last_conditional_jump = 0;
+    rt->reg_c = 0;
+    rt->reg_d = 0;
+}
+
+void route_reset(RouteEffect *fx)
+{
+    if (!fx) return;
+    fx->set_dir = 0;
+    fx->dir = 0;
+    fx->do_skip = 0;
+    fx->do_cond = 0;
+    fx->do_tp = 0;
+    fx->tp_x = 0;
+    fx->tp_y = 0;
+    fx->tp_dir = 0;
 }
 
 int runtime_push(RuntimeState *rt, int value)
@@ -32,21 +46,37 @@ int runtime_peek(RuntimeState *rt, int *out)
     return 1;
 }
 
-static ExecStatus exec_code(RuntimeState *rt, Instruction instr)
+static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx)
 {
     int a, b;
 
     switch (instr)
     {
-        // direction + skip are tracer concerns only
         case INSTR_RIGHT:
+            if (fx) { fx->set_dir = 1; fx->dir = 0; }
+            return EXEC_OK;
         case INSTR_RIGHT_SKIP:
+            if (fx) { fx->set_dir = 1; fx->dir = 0; fx->do_skip = 1; }
+            return EXEC_OK;
         case INSTR_DOWN:
+            if (fx) { fx->set_dir = 1; fx->dir = 1; }
+            return EXEC_OK;
         case INSTR_DOWN_SKIP:
+            if (fx) { fx->set_dir = 1; fx->dir = 1; fx->do_skip = 1; }
+            return EXEC_OK;
         case INSTR_LEFT:
+            if (fx) { fx->set_dir = 1; fx->dir = 2; }
+            return EXEC_OK;
         case INSTR_LEFT_SKIP:
+            if (fx) { fx->set_dir = 1; fx->dir = 2; fx->do_skip = 1; }
+            return EXEC_OK;
         case INSTR_UP:
+            if (fx) { fx->set_dir = 1; fx->dir = 3; }
+            return EXEC_OK;
         case INSTR_UP_SKIP:
+            if (fx) { fx->set_dir = 1; fx->dir = 3; fx->do_skip = 1; }
+            return EXEC_OK;
+
         case INSTR_JGT:
         case INSTR_JLT:
         case INSTR_CALL:
@@ -151,14 +181,32 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr)
             if (!runtime_push(rt, rt->reg_b)) return EXEC_ERR_STACK_OVERFLOW;
             return EXEC_OK;
 
+        case INSTR_STORE_C:
+            if (!runtime_pop(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
+            rt->reg_c = a;
+            return EXEC_OK;
+
+        case INSTR_LOAD_C:
+            if (!runtime_push(rt, rt->reg_c)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
+        case INSTR_STORE_D:
+            if (!runtime_pop(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
+            rt->reg_d = a;
+            return EXEC_OK;
+
+        case INSTR_LOAD_D:
+            if (!runtime_push(rt, rt->reg_d)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_JNZ:
             if (!runtime_pop(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
-            rt->last_conditional_jump = (a != 0);
+            if (fx) fx->do_cond = (a != 0);
             return EXEC_OK;
 
         case INSTR_JZ:
             if (!runtime_pop(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
-            rt->last_conditional_jump = (a == 0);
+            if (fx) fx->do_cond = (a == 0);
             return EXEC_OK;
 
         case INSTR_IN_NUM:
@@ -186,9 +234,9 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr)
 
         case INSTR_DEBUG:
             if (rt->sp > 0)
-                printf("DEBUG: SP=%d TOP=%d A=%d B=%d\n", rt->sp, rt->stack[rt->sp - 1], rt->reg_a, rt->reg_b);
+                printf("DEBUG: SP=%d TOP=%d A=%d B=%d C=%d D=%d\n", rt->sp, rt->stack[rt->sp - 1], rt->reg_a, rt->reg_b, rt->reg_c, rt->reg_d);
             else
-                printf("DEBUG: SP=%d TOP=EMPTY A=%d B=%d\n", rt->sp, rt->reg_a, rt->reg_b);
+                printf("DEBUG: SP=%d TOP=EMPTY A=%d B=%d C=%d D=%d\n", rt->sp, rt->reg_a, rt->reg_b, rt->reg_c, rt->reg_d);
             return EXEC_OK;
 
         case INSTR_NOP:
@@ -199,9 +247,9 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr)
     return EXEC_OK;
 }
 
-ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel)
+ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx)
 {
-    rt->last_conditional_jump = 0;
+    route_reset(fx);
 
     if (pixel.type == PIXEL_HALT) return EXEC_HALT;
     if (pixel.type == PIXEL_ERROR) return EXEC_OK; // tracer will handle this
@@ -214,7 +262,7 @@ ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel)
 
     if (pixel.type == PIXEL_CODE)
     {
-        return exec_code(rt, pixel.instr);
+        return exec_code(rt, pixel.instr, fx);
     }
 
     return EXEC_OK;

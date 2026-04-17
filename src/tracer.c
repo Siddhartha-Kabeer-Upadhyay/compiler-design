@@ -1,12 +1,12 @@
 #include "tracer.h"
 #include "utils.h"
 
-static int tracer_in_bounds(TracerState *state, int width, int height)
-{ return in_bounds(state->x, state->y, width, height); }
+static int tracer_in_bounds(TracerState *st, int w, int h)
+{ return in_bounds(st->x, st->y, w, h); }
 
-static void tracer_move_once(TracerState *state)
+static void tracer_move_once(TracerState *st)
 {
-    move_once(&state->x, &state->y, state->dir);
+    move_once(&st->x, &st->y, st->dir);
 }
 
 TracerState tracer_init(void)
@@ -20,84 +20,48 @@ TracerState tracer_init(void)
     return state;
 }
 
-void tracer_step(TracerState *state, DecodedPixel pixel)
+int tracer_apply(TracerState *st, int w, int h, const RouteEffect *fx)
 {
-    if (pixel.type == PIXEL_HALT)
+    if (fx && fx->set_dir)
+        st->dir = (Direction)fx->dir;
+
+    tracer_move_once(st);
+    if (!tracer_in_bounds(st, w, h))
     {
-        state->halted = 1;
-        return;
-    }
-
-    if (pixel.type == PIXEL_ERROR)
-    {
-        state->error = 1;
-        return;
-    }
-
-    if (pixel.type == PIXEL_CODE)
-    {
-        switch (pixel.instr)
-        {
-            case INSTR_RIGHT:
-            case INSTR_RIGHT_SKIP:
-				state->dir = DIR_RIGHT; 
-				break;
-
-            case INSTR_DOWN:
-            case INSTR_DOWN_SKIP:
-				state->dir = DIR_DOWN;  
-				break;
-
-            case INSTR_LEFT:
-            case INSTR_LEFT_SKIP:
-				state->dir = DIR_LEFT;  
-				break;
-
-            case INSTR_UP:
-            case INSTR_UP_SKIP:
-				state->dir = DIR_UP;    
-				break;
-
-            default: 
-				break;
-        }
-    }
-}
-
-int tracer_move(TracerState *state, int width, int height, DecodedPixel pixel)
-{
-    tracer_move_once(state); // every pixel moves the tracer but only code type can have skip jumps
-
-    if (!tracer_in_bounds(state, width, height))
-    {
-        state->error = 1;
+        st->error = 1;
         return 0;
     }
 
-    if (pixel.type == PIXEL_CODE && instr_is_skip(pixel.instr))
+    if (fx && fx->do_skip)
     {
-        tracer_move_once(state);
-
-        if (!tracer_in_bounds(state, width, height))
+        tracer_move_once(st);
+        if (!tracer_in_bounds(st, w, h))
         {
-            state->error = 1;
+            st->error = 1;
             return 0;
         }
     }
 
-    return 1;
-}
-
-int tracer_move_conditional(TracerState *state, int width, int height, int should_move)
-{
-    if (!should_move) return 1;
-
-    tracer_move_once(state);
-
-    if (!tracer_in_bounds(state, width, height))
+    if (fx && fx->do_cond)
     {
-        state->error = 1;
-        return 0;
+        tracer_move_once(st);
+        if (!tracer_in_bounds(st, w, h))
+        {
+            st->error = 1;
+            return 0;
+        }
+    }
+
+    if (fx && fx->do_tp)
+    {
+        st->x = fx->tp_x;
+        st->y = fx->tp_y;
+        st->dir = (Direction)fx->tp_dir;
+        if (!tracer_in_bounds(st, w, h))
+        {
+            st->error = 1;
+            return 0;
+        }
     }
 
     return 1;
