@@ -9,6 +9,7 @@ void runtime_init(RuntimeState *rt)
     rt->reg_b = 0;
     rt->reg_c = 0;
     rt->reg_d = 0;
+    rt->csp = 0;
 }
 
 void route_reset(RouteEffect *fx)
@@ -46,7 +47,8 @@ int runtime_peek(RuntimeState *rt, int *out)
     return 1;
 }
 
-static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx)
+static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx,
+                            int cur_x, int cur_y, int cur_d)
 {
     int a, b;
 
@@ -88,7 +90,33 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
             return EXEC_OK;
 
         case INSTR_CALL:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (rt->csp >= CALL_MAX) return EXEC_ERR_CALL_OVERFLOW;
+            rt->call_x[rt->csp] = cur_x;
+            rt->call_y[rt->csp] = cur_y;
+            rt->call_d[rt->csp] = cur_d;
+            rt->csp++;
+            if (fx)
+            {
+                fx->do_tp = 1;
+                fx->tp_x = b;
+                fx->tp_y = a;
+                fx->tp_dir = cur_d;
+            }
+            return EXEC_OK;
+
         case INSTR_RET:
+            if (rt->csp <= 0) return EXEC_ERR_CALL_UNDERFLOW;
+            rt->csp--;
+            if (fx)
+            {
+                fx->do_tp = 1;
+                fx->tp_x = rt->call_x[rt->csp];
+                fx->tp_y = rt->call_y[rt->csp];
+                fx->tp_dir = rt->call_d[rt->csp];
+            }
+            return EXEC_OK;
+
         case INSTR_READ:
         case INSTR_WRITE:
             return EXEC_OK;
@@ -305,6 +333,10 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
 }
 
 ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx)
+{ return execute_pixel_at(rt, pixel, fx, 0, 0, 0); }
+
+ExecStatus execute_pixel_at(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
+                            int cur_x, int cur_y, int cur_d)
 {
     route_reset(fx);
 
@@ -319,7 +351,7 @@ ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx)
 
     if (pixel.type == PIXEL_CODE)
     {
-        return exec_code(rt, pixel.instr, fx);
+        return exec_code(rt, pixel.instr, fx, cur_x, cur_y, cur_d);
     }
 
     return EXEC_OK;
@@ -332,6 +364,8 @@ const char* exec_status_name(ExecStatus s)
         case EXEC_OK: return "OK";
         case EXEC_HALT: return "HALT";
         case EXEC_ERR_TRAP: return "ERR_TRAP";
+        case EXEC_ERR_CALL_UNDERFLOW: return "ERR_CALL_UNDERFLOW";
+        case EXEC_ERR_CALL_OVERFLOW: return "ERR_CALL_OVERFLOW";
         case EXEC_ERR_STACK_UNDERFLOW: return "ERR_STACK_UNDERFLOW";
         case EXEC_ERR_STACK_OVERFLOW: return "ERR_STACK_OVERFLOW";
         case EXEC_ERR_DIV_ZERO: return "ERR_DIV_ZERO";

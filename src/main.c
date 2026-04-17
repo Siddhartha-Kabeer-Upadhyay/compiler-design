@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
             unsigned char a = img[idx + 3];
 
             DecodedPixel pixel = decode_pixel(r, g, b, a);
-			ExecStatus exec = execute_pixel(&rt, pixel, &fx);
+			ExecStatus exec = execute_pixel_at(&rt, pixel, &fx, state.x, state.y, state.dir);
 			if (exec != EXEC_OK && exec != EXEC_HALT)
 			{
 			    fprintf(stderr, "EXEC_ERROR: %s\n", exec_status_name(exec));

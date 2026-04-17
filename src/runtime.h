@@ -3,12 +3,15 @@
 #define RUNTIME_H
 #include "instruction.h"
 #define STACK_MAX 1024 // random big value, will adjust later
+#define CALL_MAX 256
 
 typedef enum
 {
     EXEC_OK,
     EXEC_HALT,
     EXEC_ERR_TRAP,
+    EXEC_ERR_CALL_UNDERFLOW,
+    EXEC_ERR_CALL_OVERFLOW,
     EXEC_ERR_STACK_UNDERFLOW,
     EXEC_ERR_STACK_OVERFLOW,
     EXEC_ERR_DIV_ZERO,
@@ -24,6 +27,10 @@ typedef struct
     int reg_b;
     int reg_c;
     int reg_d;
+    int call_x[CALL_MAX];
+    int call_y[CALL_MAX];
+    int call_d[CALL_MAX];
+    int csp;
 } RuntimeState;
 
 typedef struct
@@ -45,6 +52,8 @@ int runtime_peek(RuntimeState *rt, int *out);
 void route_reset(RouteEffect *fx);
 
 ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx);
+ExecStatus execute_pixel_at(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
+                            int cur_x, int cur_y, int cur_d);
 const char* exec_status_name(ExecStatus s);
 
 #endif

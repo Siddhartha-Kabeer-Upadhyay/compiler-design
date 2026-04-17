@@ -89,8 +89,6 @@ Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 | 312-336° | Pink | TRAP_12 | TRAP_13 | — | Trap |
 | 336-360° | Rose | DEPTH | CLEAR | `[]→[sp]` / `[...]→[]` | Stack State |
 
-Implemented EX runtime ops: `DUP`, `OVER`, `ROT`, `ROTR`, `AND`, `OR`, `NOT`, `XOR`, `DEPTH`, `CLEAR`, `JGT`, `JLT`.
-
 ---
 
 ## Execution Model

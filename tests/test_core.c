@@ -127,6 +127,8 @@ static void test_runtime_ex_ops(void)
     DecodedPixel clr = { PIXEL_CODE, INSTR_CLEAR, 0 };
     DecodedPixel jgt = { PIXEL_CODE, INSTR_JGT, 0 };
     DecodedPixel jlt = { PIXEL_CODE, INSTR_JLT, 0 };
+    DecodedPixel call = { PIXEL_CODE, INSTR_CALL, 0 };
+    DecodedPixel ret = { PIXEL_CODE, INSTR_RET, 0 };
 
     expect_int("ex-dup-underflow", execute_pixel(&rt, dup, &fx), EXEC_ERR_STACK_UNDERFLOW);
     expect_int("ex-over-underflow", execute_pixel(&rt, over, &fx), EXEC_ERR_STACK_UNDERFLOW);
@@ -205,6 +207,25 @@ static void test_runtime_ex_ops(void)
     execute_pixel(&rt, d3, &fx);
     expect_int("ex-jlt-true", execute_pixel(&rt, jlt, &fx), EXEC_OK);
     expect_int("ex-jlt-flag-true", fx.do_cond, 1);
+
+    runtime_init(&rt);
+    expect_int("ex-ret-underflow", execute_pixel_at(&rt, ret, &fx, 4, 5, DIR_LEFT), EXEC_ERR_CALL_UNDERFLOW);
+
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-call-ok", execute_pixel_at(&rt, call, &fx, 4, 5, DIR_LEFT), EXEC_OK);
+    expect_int("ex-call-csp", rt.csp, 1);
+    expect_int("ex-call-tp", fx.do_tp, 1);
+    expect_int("ex-call-x", fx.tp_x, 2);
+    expect_int("ex-call-y", fx.tp_y, 3);
+    expect_int("ex-call-d", fx.tp_dir, DIR_LEFT);
+
+    expect_int("ex-ret-ok", execute_pixel_at(&rt, ret, &fx, 9, 9, DIR_UP), EXEC_OK);
+    expect_int("ex-ret-csp", rt.csp, 0);
+    expect_int("ex-ret-tp", fx.do_tp, 1);
+    expect_int("ex-ret-x", fx.tp_x, 4);
+    expect_int("ex-ret-y", fx.tp_y, 5);
+    expect_int("ex-ret-d", fx.tp_dir, DIR_LEFT);
 }
 
 static void test_tracer_moves(void)
