@@ -215,6 +215,20 @@ else
   failures=$((failures + 1))
 fi
 
+l2_report_out="$TMP_DIR/l2_report.out"
+if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 2 --opt-report -o "$TMP_DIR/l2report.c" >"$l2_report_out" 2>"$TMP_DIR/l2_report.err"; then
+  if grep -q "OPT_REPORT: passes=4 changes=1 nops=0 dirs=0 removed=5 dims=4x2->3x1" "$l2_report_out"; then
+    echo "PASS [cli-opt-level-2-report-image3-values]"
+  else
+    echo "FAIL [cli-opt-level-2-report-image3-values]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$l2_report_out")"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [cli-opt-level-2-report-image3-values]: command failed"
+  failures=$((failures + 1))
+fi
+
 opt_report_out="$TMP_DIR/opt_report.out"
 if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt --opt-report -o "$TMP_DIR/report.c" >"$opt_report_out" 2>"$TMP_DIR/opt_report.err"; then
   if grep -q "OPT_REPORT: passes=" "$opt_report_out"; then

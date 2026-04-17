@@ -405,6 +405,24 @@ int optimize_decoded_program(unsigned char **pixel_type, int **pixel_instr, int 
         stats->canonicalized_dirs += canonicalized_dirs;
     }
 
+    if (config->level >= 2)
+    {
+        // level 2 runs extra conservative rounds to converge further if possible
+        for (int round = 0; round < 3; round++)
+        {
+            int extra_dirs = run_direction_canonicalization(*pixel_type, *pixel_instr, *width, *height);
+            if (stats)
+            {
+                stats->passes_run += 1;
+                stats->changes += extra_dirs;
+                stats->canonicalized_dirs += extra_dirs;
+            }
+
+            if (extra_dirs == 0)
+                break;
+        }
+    }
+
     int before_w = *width;
     int before_h = *height;
     // pass 3 removes unreachable border area by reachability crop

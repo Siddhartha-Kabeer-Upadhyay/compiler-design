@@ -146,7 +146,7 @@ gcc output.c -o program
 ### Codegen Notes
 
 - `--opt` is only valid with `-o` and currently maps to safe optimization passes.
-- `--opt-level` supports `0`, `1`, `2` (`2` is a placeholder for future advanced passes).
+- `--opt-level` supports `0`, `1`, `2` (`2` runs one conservative direction-canonicalization round).
 - `--opt-report` prints stats in this format:
   - `OPT_REPORT: passes=<n> changes=<n> nops=<n> dirs=<n> removed=<n> dims=<w>x<h>-><w>x<h>`
   - `passes`: total passes run
