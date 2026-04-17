@@ -23,6 +23,7 @@ scripts/
 
 # Test images 
 *.png
+!tests/*.png
 
 # Build artifacts
 *.out

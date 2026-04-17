@@ -113,28 +113,28 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 make
 
 # Run Glint directly (default run mode)
-./glint input.png
+./glint tests/image3.png
 
 # Trace execution with optional step limit
-./glint input.png --trace 1000
+./glint tests/image3.png --trace 1000
 
 # Dump pixel decode table
-./glint input.png --dump
+./glint tests/image3.png --dump
 
 # Generate C from a Glint source image
-./glint input.png -o output.c
+./glint tests/image3.png -o output.c
 
 # Generate C with optimization passes enabled
-./glint input.png --opt -o output_opt.c
+./glint tests/image3.png --opt -o output_opt.c
 
 # Explicit optimization level (0 = off, 1 = current safe passes)
-./glint input.png --opt-level 1 -o output_opt.c
+./glint tests/image3.png --opt-level 1 -o output_opt.c
 
 # Reserved level for future advanced passes (currently behaves like level 1)
-./glint input.png --opt-level 2 -o output_opt2.c
+./glint tests/image3.png --opt-level 2 -o output_opt2.c
 
 # Emit optimization report to stdout during code generation
-./glint input.png --opt --opt-report -o output_opt.c
+./glint tests/image3.png --opt --opt-report -o output_opt.c
 
 # Compile the generated C code
 gcc output.c -o program
@@ -156,6 +156,12 @@ gcc output.c -o program
   - `lit`: literal arithmetic folds applied
   - `removed`: cells removed by reachability crop
   - `dims`: dimensions before and after optimization
+
+### Optimization Report Stability
+
+- The `OPT_REPORT` line format and field order are treated as stable test contract.
+- If report fields or ordering change, update tests and README in the same patch.
+- Current stable order: `passes`, `changes`, `nops`, `dirs`, `lit`, `removed`, `dims`.
 
 ---
 
@@ -179,5 +185,28 @@ Execution:
 3. `ADD` → Pop both, push sum, stack: `[5]`
 4. `OUT` → Print `5`
 5. Black pixel → HALT
+
+---
+
+## Architecture
+
+- `instruction.*`: pixel classification and opcode decoding from RGBA/HSV.
+- `runtime.*`: stack/register/math/io semantics and runtime status handling.
+- `tracer.*`: pointer direction updates, movement, skip movement, and bounds errors.
+- `main.c`: CLI parsing, mode orchestration (`run`, `trace`, `dump`, `codegen`), exit codes.
+- `ir.*`: decoded array representation consumed by optimizer and codegen.
+- `opt.*`: optimization passes by level (`0/1/2`) and optimization stats.
+- `codegen.*`: emits standalone C from (optionally optimized) IR.
+
+Execution paths:
+
+- Interpreter path: `main -> decode -> runtime -> tracer`.
+- Codegen path: `main -> ir -> opt -> codegen`.
+
+Test paths:
+
+- Unit semantics: `tests/test_core.c`.
+- Parity and CLI/report checks: `scripts/local_ci/test_parity.sh`.
+- CI gate: `.github/workflows/ci.yml` runs `make` and `make test`.
 
 ---

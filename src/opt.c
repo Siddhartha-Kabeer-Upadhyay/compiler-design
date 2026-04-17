@@ -274,11 +274,45 @@ static int run_lit_fold(unsigned char *pixel_type, int *pixel_instr, int *pixel_
 
         if (d < 0) continue;
         if (pixel_type[i] != PIXEL_DATA) continue;
+        a = pixel_data[i];
 
         move_once(&x1, &y1, d);
         if (!in_bounds(x1, y1, width, height)) continue;
         i1 = y1 * width + x1;
         if (in_mask[i1] != (1 << d)) continue;
+
+        if (pixel_type[i1] == PIXEL_CODE)
+        {
+            op = pixel_instr[i1];
+            // unary literal fold keeps stack semantics by replacing op with nop
+            if (op == INSTR_NEG)
+            {
+                pixel_data[i] = -a;
+                pixel_instr[i1] = INSTR_NOP;
+                folds++;
+                i = i1;
+                continue;
+            }
+            if (op == INSTR_INC)
+            {
+                pixel_data[i] = a + 1;
+                pixel_instr[i1] = INSTR_NOP;
+                folds++;
+                i = i1;
+                continue;
+            }
+            if (op == INSTR_DEC)
+            {
+                pixel_data[i] = a - 1;
+                pixel_instr[i1] = INSTR_NOP;
+                folds++;
+                i = i1;
+                continue;
+            }
+
+            continue;
+        }
+
         if (pixel_type[i1] != PIXEL_DATA) continue;
 
         x2 = x1;
