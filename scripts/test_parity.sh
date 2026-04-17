@@ -119,6 +119,65 @@ for fixture in "${FIXTURES[@]}"; do
   fi
 done
 
+for fixture in "${FIXTURES[@]}"; do
+  fixture_path="$ROOT_DIR/$fixture"
+  if [[ ! -f "$fixture_path" ]]; then
+    echo "FAIL [opt-$fixture]: missing fixture file"
+    failures=$((failures + 1))
+    continue
+  fi
+
+  interp_stdout="$TMP_DIR/opt.${fixture}.interp.out"
+  interp_stderr="$TMP_DIR/opt.${fixture}.interp.err"
+  gen_c="$TMP_DIR/opt.${fixture}.gen.c"
+  gen_bin="$TMP_DIR/opt.${fixture}.gen.bin"
+  gen_stdout="$TMP_DIR/opt.${fixture}.gen.out"
+  gen_stderr="$TMP_DIR/opt.${fixture}.gen.err"
+
+  interp_exit=$(run_and_capture "$interp_stdout" "$interp_stderr" "$GLINT_BIN" "$fixture_path")
+
+  if ! "$GLINT_BIN" "$fixture_path" --opt -o "$gen_c" >/dev/null 2>"$TMP_DIR/opt.${fixture}.codegen.err"; then
+    echo "FAIL [opt-$fixture]: code generation failed"
+    failures=$((failures + 1))
+    continue
+  fi
+
+  if ! gcc "$gen_c" -o "$gen_bin" >"$TMP_DIR/opt.${fixture}.gcc.out" 2>"$TMP_DIR/opt.${fixture}.gcc.err"; then
+    echo "FAIL [opt-$fixture]: generated C compilation failed"
+    failures=$((failures + 1))
+    continue
+  fi
+
+  gen_exit=$(run_and_capture "$gen_stdout" "$gen_stderr" "$gen_bin")
+
+  fixture_failed=0
+
+  if [[ "$interp_exit" != "$gen_exit" ]]; then
+    echo "FAIL [opt-$fixture]: exit code mismatch (interp=$interp_exit generated=$gen_exit)"
+    fixture_failed=1
+  fi
+
+  if ! cmp -s "$interp_stdout" "$gen_stdout"; then
+    echo "FAIL [opt-$fixture]: stdout mismatch"
+    echo "  interpreter: $(tr '\n' ' ' < "$interp_stdout")"
+    echo "  generated:   $(tr '\n' ' ' < "$gen_stdout")"
+    fixture_failed=1
+  fi
+
+  if ! cmp -s "$interp_stderr" "$gen_stderr"; then
+    echo "FAIL [opt-$fixture]: stderr mismatch"
+    echo "  interpreter: $(tr '\n' ' ' < "$interp_stderr")"
+    echo "  generated:   $(tr '\n' ' ' < "$gen_stderr")"
+    fixture_failed=1
+  fi
+
+  if [[ "$fixture_failed" -eq 0 ]]; then
+    echo "PASS [opt-$fixture]"
+  else
+    failures=$((failures + 1))
+  fi
+done
+
 # Basic CLI behavior checks
 expect_success "cli-default-run-image3" "$GLINT_BIN" "$ROOT_DIR/image3.png"
 expect_success "cli-trace-image3" "$GLINT_BIN" "$ROOT_DIR/image3.png" --trace 25
@@ -128,6 +187,7 @@ expect_failure "cli-missing-image" "$GLINT_BIN"
 expect_failure "cli-unknown-flag" "$GLINT_BIN" "$ROOT_DIR/image3.png" --wat
 expect_failure "cli-steplimit-with-run" "$GLINT_BIN" "$ROOT_DIR/image3.png" --run 10
 expect_failure "cli-missing-o-value" "$GLINT_BIN" "$ROOT_DIR/image3.png" -o
+expect_failure "cli-opt-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt
 
 if [[ "$failures" -ne 0 ]]; then
   printf '\nParity tests failed: %s\n' "$failures"

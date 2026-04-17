@@ -1,7 +1,9 @@
 #include "codegen.h"
 #include "instruction.h"
+#include "opt.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static int emit_header(FILE *out, int width, int height, int count)
 {
@@ -19,7 +21,8 @@ static int emit_header(FILE *out, int width, int height, int count)
     return 1;
 }
 
-static int emit_pixel_arrays(FILE *out, const unsigned char *img, int width, int height)
+static int emit_pixel_arrays(FILE *out, const unsigned char *pixel_type, const int *pixel_instr,
+                             const int *pixel_data, int width, int height)
 {
     int count = width * height;
 
@@ -27,27 +30,21 @@ static int emit_pixel_arrays(FILE *out, const unsigned char *img, int width, int
 
     for (int i = 0; i < count; i++)
     {
-        int idx = i * 4;
-        DecodedPixel pixel = decode_pixel(img[idx + 0], img[idx + 1], img[idx + 2], img[idx + 3]);
-        if (fprintf(out, "  %d%s", (int)pixel.type, (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", (int)pixel_type[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\nstatic const int pixel_instr[PIXEL_COUNT] = {\n") < 0) return 0;
 
     for (int i = 0; i < count; i++)
     {
-        int idx = i * 4;
-        DecodedPixel pixel = decode_pixel(img[idx + 0], img[idx + 1], img[idx + 2], img[idx + 3]);
-        if (fprintf(out, "  %d%s", (int)pixel.instr, (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", pixel_instr[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\nstatic const int pixel_data[PIXEL_COUNT] = {\n") < 0) return 0;
 
     for (int i = 0; i < count; i++)
     {
-        int idx = i * 4;
-        DecodedPixel pixel = decode_pixel(img[idx + 0], img[idx + 1], img[idx + 2], img[idx + 3]);
-        if (fprintf(out, "  %d%s", pixel.data_value, (i + 1 == count) ? "\n" : ",") < 0) return 0;
+        if (fprintf(out, "  %d%s", pixel_data[i], (i + 1 == count) ? "\n" : ",") < 0) return 0;
     }
 
     if (fprintf(out, "};\n\n") < 0) return 0;
@@ -358,22 +355,72 @@ static int emit_runtime(FILE *out)
     return 1;
 }
 
-int generate_c_from_image(const char *output_path, const unsigned char *img, int width, int height)
+int generate_c_from_image(const char *output_path, const unsigned char *img, int width, int height,
+                          const CodegenOptions *options)
 {
-    FILE *out = fopen(output_path, "w");
-    if (!out) return 0;
+    int count = width * height;
+    unsigned char *pixel_type = (unsigned char *)malloc((size_t)count * sizeof(unsigned char));
+    int *pixel_instr = (int *)malloc((size_t)count * sizeof(int));
+    int *pixel_data = (int *)malloc((size_t)count * sizeof(int));
+    OptConfig opt_config;
+    OptStats opt_stats;
 
-    if (!emit_pixel_arrays(out, img, width, height))
+    if (!pixel_type || !pixel_instr || !pixel_data)
+    {
+        free(pixel_type);
+        free(pixel_instr);
+        free(pixel_data);
+        return 0;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        int idx = i * 4;
+        DecodedPixel pixel = decode_pixel(img[idx + 0], img[idx + 1], img[idx + 2], img[idx + 3]);
+        pixel_type[i] = (unsigned char)pixel.type;
+        pixel_instr[i] = (int)pixel.instr;
+        pixel_data[i] = pixel.data_value;
+    }
+
+    opt_config.enabled = (options && options->enable_opt) ? 1 : 0;
+    if (!optimize_decoded_program(pixel_type, pixel_instr, pixel_data, count, &opt_config, &opt_stats))
+    {
+        free(pixel_type);
+        free(pixel_instr);
+        free(pixel_data);
+        return 0;
+    }
+
+    FILE *out = fopen(output_path, "w");
+    if (!out)
+    {
+        free(pixel_type);
+        free(pixel_instr);
+        free(pixel_data);
+        return 0;
+    }
+
+    if (!emit_pixel_arrays(out, pixel_type, pixel_instr, pixel_data, width, height))
     {
         fclose(out);
+        free(pixel_type);
+        free(pixel_instr);
+        free(pixel_data);
         return 0;
     }
 
     if (!emit_runtime(out))
     {
         fclose(out);
+        free(pixel_type);
+        free(pixel_instr);
+        free(pixel_data);
         return 0;
     }
+
+    free(pixel_type);
+    free(pixel_instr);
+    free(pixel_data);
 
     if (fclose(out) != 0) return 0;
     return 1;

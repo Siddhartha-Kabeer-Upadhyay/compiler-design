@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [-o output.c]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [-o output.c]\n", argv[0]);
         return 1;
     }
 
@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     int dump_mode = 0;
     int run_mode = 0;
     int codegen_mode = 0;
+    int opt_mode = 0;
     const char *codegen_out = NULL;
     int step_limit = 1000; // default value 
     int step_limit_set = 0;
@@ -66,6 +67,10 @@ int main(int argc, char *argv[])
             codegen_mode = 1;
             codegen_out = argv[++i];
         }
+        else if (strcmp(argv[i], "--opt") == 0)
+        {
+            opt_mode = 1;
+        }
         else if (argv[i][0] == '-')
         {
             fprintf(stderr, "Error: Unknown flag '%s'\n", argv[i]);
@@ -99,6 +104,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (opt_mode && !codegen_mode)
+    {
+        fprintf(stderr, "Error: --opt can only be used with -o\n");
+        return 1;
+    }
+
     int width, height, channels;
     unsigned char *img = stbi_load(argv[1], &width, &height, &channels, 4);
 
@@ -111,7 +122,9 @@ int main(int argc, char *argv[])
 
     if (codegen_mode)
     {
-        int ok = generate_c_from_image(codegen_out, img, width, height);
+        CodegenOptions cg_options;
+        cg_options.enable_opt = opt_mode;
+        int ok = generate_c_from_image(codegen_out, img, width, height, &cg_options);
         stbi_image_free(img);
         if (!ok)
         {
