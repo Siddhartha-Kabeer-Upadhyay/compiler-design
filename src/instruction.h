@@ -54,6 +54,67 @@ typedef enum {
     // Control (Hue 336-360)
     INSTR_NOP,          // Rose, V < 128
     INSTR_DEBUG,        // Rose, V >= 128
+
+    // EX flow (S > 60, slots 0-1)
+    INSTR_JGT,
+    INSTR_JLT,
+
+    // EX traps (S > 60, slots 2-3)
+    INSTR_TRAP_00,
+    INSTR_TRAP_01,
+
+    // EX call (S > 60, slots 4-5)
+    INSTR_CALL,
+    INSTR_RET,
+
+    // EX traps (S > 60, slots 6-7)
+    INSTR_TRAP_02,
+    INSTR_TRAP_03,
+
+    // EX stack (S > 60, slots 8-9)
+    INSTR_DUP,
+    INSTR_OVER,
+
+    // EX traps (S > 60, slots 10-11)
+    INSTR_TRAP_04,
+    INSTR_TRAP_05,
+
+    // EX stack (S > 60, slots 12-13)
+    INSTR_ROT,
+    INSTR_ROTR,
+
+    // EX traps (S > 60, slots 14-15)
+    INSTR_TRAP_06,
+    INSTR_TRAP_07,
+
+    // EX pixel mem (S > 60, slots 16-17)
+    INSTR_READ,
+    INSTR_WRITE,
+
+    // EX traps (S > 60, slots 18-19)
+    INSTR_TRAP_08,
+    INSTR_TRAP_09,
+
+    // EX bitwise (S > 60, slots 20-21)
+    INSTR_AND,
+    INSTR_OR,
+
+    // EX traps (S > 60, slots 22-23)
+    INSTR_TRAP_10,
+    INSTR_TRAP_11,
+
+    // EX bitwise (S > 60, slots 24-25)
+    INSTR_NOT,
+    INSTR_XOR,
+
+    // EX traps (S > 60, slots 26-27)
+    INSTR_TRAP_12,
+    INSTR_TRAP_13,
+
+    // EX stack state (S > 60, slots 28-29)
+    INSTR_DEPTH,
+    INSTR_CLEAR,
+
     INSTR_NONE          // No instruction 
 } Instruction;
 

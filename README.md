@@ -31,11 +31,12 @@ A transpiled esoteric programming language where source code is a PNG image and 
 | Alpha = 0 | Transparent | Error halt, `exit(1)` |
 | R=0, G=0, B=0 | Black | Clean halt, `exit(0)` |
 | S ≤ 20% | Data | Push V (0-255) onto stack |
-| S > 20% | Code | Execute instruction based on hue |
+| 20% < S ≤ 60% | Base code | Execute base bank instruction |
+| S > 60% | EX code | Execute Glint-ex bank instruction |
 
 ### Value Modifies Instructions
 
-For CODE pixels (S > 20%), the Value component selects between two instruction variants:
+For CODE pixels (`S > 20%`), Value selects between two variants:
 
 | Value | Effect |
 |-------|--------|
@@ -45,6 +46,8 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 ---
 
 ## Instruction Set
+
+### Base Bank (`20% < S <= 60%`)
 
 | Hue | Color | V < 128 | V ≥ 128 | Stack Effect | Category |
 |-----|-------|---------|---------|--------------|----------|
@@ -63,6 +66,28 @@ For CODE pixels (S > 20%), the Value component selects between two instruction v
 | 288-312° | Magenta | IN_NUM | IN_CHR | `[]→[input]` | I/O |
 | 312-336° | Pink | OUT_NUM | OUT_CHR | `[a]→[]` | I/O |
 | 336-360° | Rose | NOP | DEBUG | — | Control |
+
+### EX Bank (`S > 60%`)
+
+EX bank keeps 30 slots using 15 hue bands with V split. Active ops are interleaved as pairs with trap pairs.
+
+| Hue | V < 128 | V >= 128 |
+|-----|---------|----------|
+| 0-24° | JGT | JLT |
+| 24-48° | TRAP_00 | TRAP_01 |
+| 48-72° | CALL | RET |
+| 72-96° | TRAP_02 | TRAP_03 |
+| 96-120° | DUP | OVER |
+| 120-144° | TRAP_04 | TRAP_05 |
+| 144-168° | ROT | ROTR |
+| 168-192° | TRAP_06 | TRAP_07 |
+| 192-216° | READ | WRITE |
+| 216-240° | TRAP_08 | TRAP_09 |
+| 240-264° | AND | OR |
+| 264-288° | TRAP_10 | TRAP_11 |
+| 288-312° | NOT | XOR |
+| 312-336° | TRAP_12 | TRAP_13 |
+| 336-360° | DEPTH | CLEAR |
 
 ---
 

@@ -47,6 +47,36 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr)
         case INSTR_LEFT_SKIP:
         case INSTR_UP:
         case INSTR_UP_SKIP:
+        case INSTR_JGT:
+        case INSTR_JLT:
+        case INSTR_CALL:
+        case INSTR_RET:
+        case INSTR_DUP:
+        case INSTR_OVER:
+        case INSTR_ROT:
+        case INSTR_ROTR:
+        case INSTR_READ:
+        case INSTR_WRITE:
+        case INSTR_AND:
+        case INSTR_OR:
+        case INSTR_NOT:
+        case INSTR_XOR:
+        case INSTR_DEPTH:
+        case INSTR_CLEAR:
+        case INSTR_TRAP_00:
+        case INSTR_TRAP_01:
+        case INSTR_TRAP_02:
+        case INSTR_TRAP_03:
+        case INSTR_TRAP_04:
+        case INSTR_TRAP_05:
+        case INSTR_TRAP_06:
+        case INSTR_TRAP_07:
+        case INSTR_TRAP_08:
+        case INSTR_TRAP_09:
+        case INSTR_TRAP_10:
+        case INSTR_TRAP_11:
+        case INSTR_TRAP_12:
+        case INSTR_TRAP_13:
             return EXEC_OK;
 
         case INSTR_POP:

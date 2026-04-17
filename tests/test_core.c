@@ -46,9 +46,9 @@ static void test_decode_precedence(void)
     expect_int("decode-data-type", p2.type, PIXEL_DATA);
     expect_int("decode-data-value", p2.data_value, 200);
 
-    DecodedPixel p3 = decode_pixel(255, 0, 0, 255);
+    DecodedPixel p3 = decode_pixel(255, 153, 153, 255);
     expect_int("decode-code-type", p3.type, PIXEL_CODE);
-    expect_int("decode-v-threshold", p3.instr, INSTR_RIGHT_SKIP);
+    expect_int("decode-base-v-threshold", p3.instr, INSTR_RIGHT_SKIP);
 }
 
 static void test_runtime_core(void)
