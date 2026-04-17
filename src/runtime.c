@@ -78,21 +78,78 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
             return EXEC_OK;
 
         case INSTR_JGT:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (fx) fx->do_cond = (b > a);
+            return EXEC_OK;
+
         case INSTR_JLT:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (fx) fx->do_cond = (b < a);
+            return EXEC_OK;
+
         case INSTR_CALL:
         case INSTR_RET:
-        case INSTR_DUP:
-        case INSTR_OVER:
-        case INSTR_ROT:
-        case INSTR_ROTR:
         case INSTR_READ:
         case INSTR_WRITE:
+            return EXEC_OK;
+
+        case INSTR_DUP:
+            if (!runtime_peek(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (!runtime_push(rt, a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
+        case INSTR_OVER:
+            if (rt->sp < 2) return EXEC_ERR_STACK_UNDERFLOW;
+            a = rt->stack[rt->sp - 2];
+            if (!runtime_push(rt, a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
+        case INSTR_ROT:
+            if (rt->sp < 3) return EXEC_ERR_STACK_UNDERFLOW;
+            a = rt->stack[rt->sp - 3];
+            b = rt->stack[rt->sp - 2];
+            rt->stack[rt->sp - 3] = b;
+            rt->stack[rt->sp - 2] = rt->stack[rt->sp - 1];
+            rt->stack[rt->sp - 1] = a;
+            return EXEC_OK;
+
+        case INSTR_ROTR:
+            if (rt->sp < 3) return EXEC_ERR_STACK_UNDERFLOW;
+            a = rt->stack[rt->sp - 1];
+            b = rt->stack[rt->sp - 3];
+            rt->stack[rt->sp - 1] = rt->stack[rt->sp - 2];
+            rt->stack[rt->sp - 2] = b;
+            rt->stack[rt->sp - 3] = a;
+            return EXEC_OK;
+
         case INSTR_AND:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (!runtime_push(rt, b & a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_OR:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (!runtime_push(rt, b | a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_NOT:
+            if (!runtime_pop(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (!runtime_push(rt, ~a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_XOR:
+            if (!runtime_pop(rt, &a) || !runtime_pop(rt, &b)) return EXEC_ERR_STACK_UNDERFLOW;
+            if (!runtime_push(rt, b ^ a)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_DEPTH:
+            if (!runtime_push(rt, rt->sp)) return EXEC_ERR_STACK_OVERFLOW;
+            return EXEC_OK;
+
         case INSTR_CLEAR:
+            rt->sp = 0;
+            return EXEC_OK;
+
         case INSTR_TRAP_00:
         case INSTR_TRAP_01:
         case INSTR_TRAP_02:
@@ -107,7 +164,7 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
         case INSTR_TRAP_11:
         case INSTR_TRAP_12:
         case INSTR_TRAP_13:
-            return EXEC_OK;
+            return EXEC_ERR_TRAP;
 
         case INSTR_POP:
             if (!runtime_pop(rt, NULL)) return EXEC_ERR_STACK_UNDERFLOW;
@@ -274,6 +331,7 @@ const char* exec_status_name(ExecStatus s)
     {
         case EXEC_OK: return "OK";
         case EXEC_HALT: return "HALT";
+        case EXEC_ERR_TRAP: return "ERR_TRAP";
         case EXEC_ERR_STACK_UNDERFLOW: return "ERR_STACK_UNDERFLOW";
         case EXEC_ERR_STACK_OVERFLOW: return "ERR_STACK_OVERFLOW";
         case EXEC_ERR_DIV_ZERO: return "ERR_DIV_ZERO";

@@ -89,6 +89,8 @@ Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 | 312-336° | Pink | TRAP_12 | TRAP_13 | — | Trap |
 | 336-360° | Rose | DEPTH | CLEAR | `[]→[sp]` / `[...]→[]` | Stack State |
 
+Implemented EX runtime ops: `DUP`, `OVER`, `ROT`, `ROTR`, `AND`, `OR`, `NOT`, `XOR`, `DEPTH`, `CLEAR`, `JGT`, `JLT`.
+
 ---
 
 ## Execution Model
@@ -126,6 +128,7 @@ Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 |-----------|----------|
 | Stack underflow | HALT with error: `"Stack underflow at (x,y)"` |
 | Stack overflow | HALT with error: `"Stack overflow at (x,y)"` |
+| Trap opcode | HALT with error: `"ERR_TRAP"` |
 | Division by zero | HALT with error: `"Division by zero at (x,y)"` |
 | Modulo by zero | HALT with error: `"Modulo by zero at (x,y)"` |
 | Out of bounds | HALT with error: `"Reached Out of Bounds"` |

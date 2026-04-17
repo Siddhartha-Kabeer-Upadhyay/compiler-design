@@ -68,6 +68,8 @@ static void test_runtime_core(void)
     DecodedPixel lc = { PIXEL_CODE, INSTR_LOAD_C, 0 };
     DecodedPixel sd = { PIXEL_CODE, INSTR_STORE_D, 0 };
     DecodedPixel ld = { PIXEL_CODE, INSTR_LOAD_D, 0 };
+    DecodedPixel t0 = { PIXEL_CODE, INSTR_TRAP_00, 0 };
+    DecodedPixel t9 = { PIXEL_CODE, INSTR_TRAP_09, 0 };
 
     expect_int("runtime-push-2", execute_pixel(&rt, d2, &fx), EXEC_OK);
     expect_int("runtime-push-3", execute_pixel(&rt, d3, &fx), EXEC_OK);
@@ -96,6 +98,113 @@ static void test_runtime_core(void)
     expect_int("runtime-store-d", execute_pixel(&rt, sd, &fx), EXEC_OK);
     expect_int("runtime-load-d", execute_pixel(&rt, ld, &fx), EXEC_OK);
     expect_int("runtime-top-d", rt.stack[rt.sp - 1], 7);
+
+    expect_int("runtime-trap-00", execute_pixel(&rt, t0, &fx), EXEC_ERR_TRAP);
+    expect_int("runtime-trap-09", execute_pixel(&rt, t9, &fx), EXEC_ERR_TRAP);
+}
+
+static void test_runtime_ex_ops(void)
+{
+    RuntimeState rt;
+    RouteEffect fx;
+    runtime_init(&rt);
+
+    DecodedPixel d1 = { PIXEL_DATA, INSTR_NONE, 1 };
+    DecodedPixel d2 = { PIXEL_DATA, INSTR_NONE, 2 };
+    DecodedPixel d3 = { PIXEL_DATA, INSTR_NONE, 3 };
+    DecodedPixel d5 = { PIXEL_DATA, INSTR_NONE, 5 };
+    DecodedPixel d6 = { PIXEL_DATA, INSTR_NONE, 6 };
+
+    DecodedPixel dup = { PIXEL_CODE, INSTR_DUP, 0 };
+    DecodedPixel over = { PIXEL_CODE, INSTR_OVER, 0 };
+    DecodedPixel rot = { PIXEL_CODE, INSTR_ROT, 0 };
+    DecodedPixel rotr = { PIXEL_CODE, INSTR_ROTR, 0 };
+    DecodedPixel and_op = { PIXEL_CODE, INSTR_AND, 0 };
+    DecodedPixel or_op = { PIXEL_CODE, INSTR_OR, 0 };
+    DecodedPixel not_op = { PIXEL_CODE, INSTR_NOT, 0 };
+    DecodedPixel xor_op = { PIXEL_CODE, INSTR_XOR, 0 };
+    DecodedPixel dep = { PIXEL_CODE, INSTR_DEPTH, 0 };
+    DecodedPixel clr = { PIXEL_CODE, INSTR_CLEAR, 0 };
+    DecodedPixel jgt = { PIXEL_CODE, INSTR_JGT, 0 };
+    DecodedPixel jlt = { PIXEL_CODE, INSTR_JLT, 0 };
+
+    expect_int("ex-dup-underflow", execute_pixel(&rt, dup, &fx), EXEC_ERR_STACK_UNDERFLOW);
+    expect_int("ex-over-underflow", execute_pixel(&rt, over, &fx), EXEC_ERR_STACK_UNDERFLOW);
+
+    execute_pixel(&rt, d1, &fx);
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-rot-ok", execute_pixel(&rt, rot, &fx), EXEC_OK);
+    expect_int("ex-rot-a", rt.stack[0], 2);
+    expect_int("ex-rot-b", rt.stack[1], 3);
+    expect_int("ex-rot-c", rt.stack[2], 1);
+
+    expect_int("ex-rotr-ok", execute_pixel(&rt, rotr, &fx), EXEC_OK);
+    expect_int("ex-rotr-a", rt.stack[0], 1);
+    expect_int("ex-rotr-b", rt.stack[1], 2);
+    expect_int("ex-rotr-c", rt.stack[2], 3);
+
+    expect_int("ex-dup-ok", execute_pixel(&rt, dup, &fx), EXEC_OK);
+    expect_int("ex-dup-top", rt.stack[rt.sp - 1], 3);
+
+    expect_int("ex-over-ok", execute_pixel(&rt, over, &fx), EXEC_OK);
+    expect_int("ex-over-top", rt.stack[rt.sp - 1], 3);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d6, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-and-ok", execute_pixel(&rt, and_op, &fx), EXEC_OK);
+    expect_int("ex-and-top", rt.stack[rt.sp - 1], 2);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d5, &fx);
+    execute_pixel(&rt, d2, &fx);
+    expect_int("ex-or-ok", execute_pixel(&rt, or_op, &fx), EXEC_OK);
+    expect_int("ex-or-top", rt.stack[rt.sp - 1], 7);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d5, &fx);
+    expect_int("ex-not-ok", execute_pixel(&rt, not_op, &fx), EXEC_OK);
+    expect_int("ex-not-top", rt.stack[rt.sp - 1], ~5);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d6, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-xor-ok", execute_pixel(&rt, xor_op, &fx), EXEC_OK);
+    expect_int("ex-xor-top", rt.stack[rt.sp - 1], 5);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d1, &fx);
+    execute_pixel(&rt, d2, &fx);
+    expect_int("ex-depth-ok", execute_pixel(&rt, dep, &fx), EXEC_OK);
+    expect_int("ex-depth-top", rt.stack[rt.sp - 1], 2);
+
+    expect_int("ex-clear-ok", execute_pixel(&rt, clr, &fx), EXEC_OK);
+    expect_int("ex-clear-sp", rt.sp, 0);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d3, &fx);
+    execute_pixel(&rt, d2, &fx);
+    expect_int("ex-jgt-true", execute_pixel(&rt, jgt, &fx), EXEC_OK);
+    expect_int("ex-jgt-flag-true", fx.do_cond, 1);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-jgt-false", execute_pixel(&rt, jgt, &fx), EXEC_OK);
+    expect_int("ex-jgt-flag-false", fx.do_cond, 0);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d3, &fx);
+    execute_pixel(&rt, d2, &fx);
+    expect_int("ex-jlt-false", execute_pixel(&rt, jlt, &fx), EXEC_OK);
+    expect_int("ex-jlt-flag-false", fx.do_cond, 0);
+
+    runtime_init(&rt);
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d3, &fx);
+    expect_int("ex-jlt-true", execute_pixel(&rt, jlt, &fx), EXEC_OK);
+    expect_int("ex-jlt-flag-true", fx.do_cond, 1);
 }
 
 static void test_tracer_moves(void)
@@ -127,6 +236,7 @@ int main(void)
     test_hsv();
     test_decode_precedence();
     test_runtime_core();
+    test_runtime_ex_ops();
     test_tracer_moves();
 
     if (failures)
