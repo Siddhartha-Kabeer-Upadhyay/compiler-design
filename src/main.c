@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [--opt-level 0|1] [--opt-report] [-o output.c]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [--opt-level 0|1|2] [--opt-report] [-o output.c]\n", argv[0]);
         return 1;
     }
 
@@ -87,9 +87,9 @@ int main(int argc, char *argv[])
 
             char *end = NULL;
             long parsed_level = strtol(argv[++i], &end, 10);
-            if (*end != '\0' || parsed_level < 0 || parsed_level > 1)
+            if (*end != '\0' || parsed_level < 0 || parsed_level > 2)
             {
-                fprintf(stderr, "Error: Invalid --opt-level '%s' (expected 0 or 1)\n", argv[i]);
+                fprintf(stderr, "Error: Invalid --opt-level '%s' (expected 0, 1, or 2)\n", argv[i]);
                 return 1;
             }
             opt_level = (int)parsed_level;
@@ -172,10 +172,11 @@ int main(int argc, char *argv[])
 
         if (opt_report)
         {
-            printf("OPT_REPORT: passes=%d changes=%d nops=%d removed=%d dims=%dx%d->%dx%d\n",
+            printf("OPT_REPORT: passes=%d changes=%d nops=%d dirs=%d removed=%d dims=%dx%d->%dx%d\n",
                    cg_options.opt_stats.passes_run,
                    cg_options.opt_stats.changes,
                    cg_options.opt_stats.canonicalized_nops,
+                   cg_options.opt_stats.canonicalized_dirs,
                    cg_options.opt_stats.removed_cells,
                    cg_options.opt_stats.width_before,
                    cg_options.opt_stats.height_before,

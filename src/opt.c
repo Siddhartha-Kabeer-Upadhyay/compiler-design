@@ -10,6 +10,11 @@ typedef struct {
     int dir;
 } WorkItem;
 
+static int instr_is_direction_non_skip(int instr)
+{
+    return instr == INSTR_RIGHT || instr == INSTR_DOWN || instr == INSTR_LEFT || instr == INSTR_UP;
+}
+
 static int next_dir_for_instr(int current_dir, int instr)
 {
     switch (instr)
@@ -53,6 +58,126 @@ static int run_nop_canonicalization(const unsigned char *pixel_type, int *pixel_
             changes++;
         }
     }
+    return changes;
+}
+
+static int run_direction_canonicalization(const unsigned char *pixel_type, int *pixel_instr, int width, int height)
+{
+    int count = width * height;
+    int queue_cap = count * 8;
+    int changes = 0;
+    int *incoming_mask = (int *)calloc((size_t)count, sizeof(int));
+    unsigned char *visited_state = (unsigned char *)calloc((size_t)count * 4, sizeof(unsigned char));
+    WorkItem *queue = (WorkItem *)malloc((size_t)queue_cap * sizeof(WorkItem));
+    int head = 0;
+    int tail = 0;
+
+    if (!incoming_mask || !visited_state || !queue)
+    {
+        free(incoming_mask);
+        free(visited_state);
+        free(queue);
+        return 0;
+    }
+
+    if (!push_item(queue, &tail, queue_cap, 0, 0, 0))
+    {
+        free(incoming_mask);
+        free(visited_state);
+        free(queue);
+        return 0;
+    }
+
+    while (head < tail)
+    {
+        WorkItem it = queue[head++];
+        int x = it.x;
+        int y = it.y;
+        int dir = it.dir;
+
+        if (!in_bounds(x, y, width, height))
+            continue;
+
+        int idx = y * width + x;
+        int state_idx = idx * 4 + dir;
+        if (visited_state[state_idx])
+            continue;
+
+        visited_state[state_idx] = 1;
+        incoming_mask[idx] |= (1 << dir);
+
+        if (pixel_type[idx] == PIXEL_HALT || pixel_type[idx] == PIXEL_ERROR)
+            continue;
+
+        int instr = pixel_instr[idx];
+        int next_dir = dir;
+        if (pixel_type[idx] == PIXEL_CODE)
+            next_dir = next_dir_for_instr(dir, instr);
+
+        int nx = x;
+        int ny = y;
+        move_once(&nx, &ny, next_dir);
+        if (!in_bounds(nx, ny, width, height))
+            continue;
+
+        int sx = nx;
+        int sy = ny;
+        if (pixel_type[idx] == PIXEL_CODE && instr_is_skip(instr))
+        {
+            move_once(&sx, &sy, next_dir);
+            if (!in_bounds(sx, sy, width, height))
+                continue;
+        }
+
+        if (!push_item(queue, &tail, queue_cap, sx, sy, next_dir))
+        {
+            free(incoming_mask);
+            free(visited_state);
+            free(queue);
+            return 0;
+        }
+
+        if (pixel_type[idx] == PIXEL_CODE && (instr == INSTR_JZ || instr == INSTR_JNZ))
+        {
+            int cx = sx;
+            int cy = sy;
+            move_once(&cx, &cy, next_dir);
+            if (in_bounds(cx, cy, width, height))
+            {
+                if (!push_item(queue, &tail, queue_cap, cx, cy, next_dir))
+                {
+                    free(incoming_mask);
+                    free(visited_state);
+                    free(queue);
+                    return 0;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        int instr = pixel_instr[i];
+        if (pixel_type[i] != PIXEL_CODE || !instr_is_direction_non_skip(instr))
+            continue;
+
+        int mask = incoming_mask[i];
+        if (mask == 0 || (mask & (mask - 1)) != 0)
+            continue;
+
+        int incoming_dir = (mask == 1) ? 0 : (mask == 2) ? 1 : (mask == 4) ? 2 : 3;
+        int target_dir = (instr == INSTR_RIGHT) ? 0 : (instr == INSTR_DOWN) ? 1 : (instr == INSTR_LEFT) ? 2 : 3;
+
+        if (incoming_dir == target_dir)
+        {
+            pixel_instr[i] = INSTR_NOP;
+            changes++;
+        }
+    }
+
+    free(incoming_mask);
+    free(visited_state);
+    free(queue);
     return changes;
 }
 
@@ -271,9 +396,18 @@ int optimize_decoded_program(unsigned char **pixel_type, int **pixel_instr, int 
         stats->canonicalized_nops += canonicalized;
     }
 
+    // pass 2 canonicalizes redundant direction writes with single incoming direction
+    int canonicalized_dirs = run_direction_canonicalization(*pixel_type, *pixel_instr, *width, *height);
+    if (stats)
+    {
+        stats->passes_run += 1;
+        stats->changes += canonicalized_dirs;
+        stats->canonicalized_dirs += canonicalized_dirs;
+    }
+
     int before_w = *width;
     int before_h = *height;
-    // pass 2 removes unreachable border area by reachability crop
+    // pass 3 removes unreachable border area by reachability crop
     if (!run_reachability_crop(pixel_type, pixel_instr, pixel_data, width, height, stats))
         return 0;
 

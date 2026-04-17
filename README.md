@@ -130,6 +130,9 @@ make
 # Explicit optimization level (0 = off, 1 = current safe passes)
 ./glint input.png --opt-level 1 -o output_opt.c
 
+# Reserved level for future advanced passes (currently behaves like level 1)
+./glint input.png --opt-level 2 -o output_opt2.c
+
 # Emit optimization report to stdout during code generation
 ./glint input.png --opt --opt-report -o output_opt.c
 
@@ -143,8 +146,15 @@ gcc output.c -o program
 ### Codegen Notes
 
 - `--opt` is only valid with `-o` and currently maps to safe optimization passes.
-- `--opt-level` is currently `0` or `1`.
-- `--opt-report` prints pass and size stats (passes, changes, removed cells, dimensions before/after).
+- `--opt-level` supports `0`, `1`, `2` (`2` is a placeholder for future advanced passes).
+- `--opt-report` prints stats in this format:
+  - `OPT_REPORT: passes=<n> changes=<n> nops=<n> dirs=<n> removed=<n> dims=<w>x<h>-><w>x<h>`
+  - `passes`: total passes run
+  - `changes`: total optimization changes
+  - `nops`: instructions canonicalized to `NOP`
+  - `dirs`: redundant direction writes canonicalized to `NOP`
+  - `removed`: cells removed by reachability crop
+  - `dims`: dimensions before and after optimization
 
 ---
 

@@ -192,12 +192,43 @@ expect_failure "cli-opt-level-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --o
 expect_failure "cli-opt-report-without-o" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-report
 expect_failure "cli-invalid-opt-level" "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 9 -o "$TMP_DIR/bad.c"
 
+if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt-level 2 -o "$TMP_DIR/level2.c" >/dev/null 2>"$TMP_DIR/level2.err"; then
+  if gcc "$TMP_DIR/level2.c" -o "$TMP_DIR/level2.bin" >/dev/null 2>"$TMP_DIR/level2.gcc.err"; then
+    level2_stdout="$TMP_DIR/level2.out"
+    level2_stderr="$TMP_DIR/level2.stderr"
+    interp2_stdout="$TMP_DIR/level2.interp.out"
+    interp2_stderr="$TMP_DIR/level2.interp.stderr"
+    level2_exit=$(run_and_capture "$level2_stdout" "$level2_stderr" "$TMP_DIR/level2.bin")
+    interp2_exit=$(run_and_capture "$interp2_stdout" "$interp2_stderr" "$GLINT_BIN" "$ROOT_DIR/image3.png")
+    if [[ "$level2_exit" == "$interp2_exit" ]] && cmp -s "$level2_stdout" "$interp2_stdout" && cmp -s "$level2_stderr" "$interp2_stderr"; then
+      echo "PASS [cli-opt-level-2-parity]"
+    else
+      echo "FAIL [cli-opt-level-2-parity]: output or exit mismatch"
+      failures=$((failures + 1))
+    fi
+  else
+    echo "FAIL [cli-opt-level-2-parity]: generated C compilation failed"
+    failures=$((failures + 1))
+  fi
+else
+  echo "FAIL [cli-opt-level-2-parity]: codegen failed"
+  failures=$((failures + 1))
+fi
+
 opt_report_out="$TMP_DIR/opt_report.out"
 if "$GLINT_BIN" "$ROOT_DIR/image3.png" --opt --opt-report -o "$TMP_DIR/report.c" >"$opt_report_out" 2>"$TMP_DIR/opt_report.err"; then
   if grep -q "OPT_REPORT: passes=" "$opt_report_out"; then
     echo "PASS [cli-opt-report-output]"
   else
     echo "FAIL [cli-opt-report-output]: missing report output"
+    failures=$((failures + 1))
+  fi
+
+  if grep -q "OPT_REPORT: passes=3 changes=1 nops=0 dirs=0 removed=5 dims=4x2->3x1" "$opt_report_out"; then
+    echo "PASS [cli-opt-report-image3-values]"
+  else
+    echo "FAIL [cli-opt-report-image3-values]: unexpected report values"
+    echo "  got: $(tr '\n' ' ' < "$opt_report_out")"
     failures=$((failures + 1))
   fi
 else

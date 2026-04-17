@@ -12,6 +12,7 @@ typedef struct {
     int passes_run;
     int changes;
     int canonicalized_nops;
+    int canonicalized_dirs;
     int removed_cells;
     int width_before;
     int height_before;
