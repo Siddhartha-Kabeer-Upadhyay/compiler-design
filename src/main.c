@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
 	// check how many args were passed, argv[0] returns the executable name
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [--opt-level 0|1|2] [--opt-report] [-o output.c]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image.png> [--run|--trace [step_limit]|--dump] [--opt] [--opt-level 0|1|2] [--opt-report] [--fast-c] [-o output.c]\n", argv[0]);
         return 1;
     }
 
@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     int codegen_mode = 0;
     int opt_mode = 0;
     int opt_report = 0;
+    int fast_c = 0;
     int opt_level = -1;
     const char *codegen_out = NULL;
     int step_limit = 1000; // default value 
@@ -76,6 +77,10 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "--opt-report") == 0)
         {
             opt_report = 1;
+        }
+        else if (strcmp(argv[i], "--fast-c") == 0)
+        {
+            fast_c = 1;
         }
         else if (strcmp(argv[i], "--opt-level") == 0)
         {
@@ -139,6 +144,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (fast_c && !codegen_mode)
+    {
+        fprintf(stderr, "Error: --fast-c can only be used with -o\n");
+        return 1;
+    }
+
     if (opt_level >= 0 && !codegen_mode)
     {
         fprintf(stderr, "Error: --opt-level can only be used with -o\n");
@@ -161,6 +172,7 @@ int main(int argc, char *argv[])
         cg_options.enable_opt = opt_mode || (opt_level > 0);
         cg_options.opt_level = (opt_level >= 0) ? opt_level : (cg_options.enable_opt ? 1 : 0);
         cg_options.opt_report = opt_report;
+        cg_options.fast_c = fast_c;
         // codegen path exits early because run/trace modes are different pipeline
         int ok = generate_c_from_image(codegen_out, img, width, height, &cg_options);
         stbi_image_free(img);

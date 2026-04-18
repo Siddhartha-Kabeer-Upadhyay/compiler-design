@@ -164,6 +164,9 @@ make
 # Emit optimization report to stdout during code generation
 ./glint tests/image3.png --opt --opt-report -o output_opt.c
 
+# Generate smaller C diagnostics (keeps hard runtime checks)
+./glint tests/image3.png --fast-c -o output_fast.c
+
 # Compile the generated C code
 gcc output.c -o program
 
@@ -175,6 +178,8 @@ gcc output.c -o program
 
 - `--opt` is only valid with `-o` and currently maps to safe optimization passes.
 - `--opt-level` supports `0`, `1`, `2` (`2` runs one conservative direction-canonicalization round).
+- `--fast-c` is only valid with `-o` and reduces generated diagnostic verbosity.
+- Generated fast mode can be compiled with `-DFAST_C` for the smallest emitted diagnostics.
 - Base-bank programs use optimized static decode codegen path.
 - Glint Extended programs use generated runtime decode-on-step with mutable RGBA memory.
 

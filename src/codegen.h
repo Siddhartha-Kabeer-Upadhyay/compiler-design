@@ -7,6 +7,7 @@ typedef struct {
     int enable_opt;
     int opt_level;
     int opt_report;
+    int fast_c;
     OptStats opt_stats;
 } CodegenOptions;
 
