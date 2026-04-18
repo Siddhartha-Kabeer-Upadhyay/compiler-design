@@ -141,31 +141,37 @@ Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 make
 
 # Run Glint directly (default run mode)
-./glint tests/image3.png
+printf '5\n' | ./glint tests/factorial.png
 
 # Trace execution with optional step limit
-./glint tests/image3.png --trace 1000
+printf '5\n' | ./glint tests/factorial.png --trace 1000
 
 # Dump pixel decode table
-./glint tests/image3.png --dump
+./glint tests/factorial.png --dump
 
 # Generate C from a Glint source image
-./glint tests/image3.png -o output.c
+./glint tests/factorial.png -o output.c
 
 # Generate C with optimization passes enabled
-./glint tests/image3.png --opt -o output_opt.c
+./glint tests/factorial.png --opt -o output_opt.c
 
 # Explicit optimization level (0 = off, 1 = current safe passes)
-./glint tests/image3.png --opt-level 1 -o output_opt.c
+./glint tests/factorial.png --opt-level 1 -o output_opt.c
 
 # Reserved level for future advanced passes (currently behaves like level 1)
-./glint tests/image3.png --opt-level 2 -o output_opt2.c
+./glint tests/factorial.png --opt-level 2 -o output_opt2.c
 
 # Emit optimization report to stdout during code generation
-./glint tests/image3.png --opt --opt-report -o output_opt.c
+./glint tests/factorial.png --opt --opt-report -o output_opt.c
 
 # Generate smaller C diagnostics (keeps hard runtime checks)
-./glint tests/image3.png --fast-c -o output_fast.c
+./glint tests/factorial.png --fast-c -o output_fast.c
+
+# Compile fast-mode generated C with lean runtime diagnostics
+gcc -DFAST_C output_fast.c -o program_fast
+
+# Run program generated in fast mode
+./program_fast
 
 # Compile the generated C code
 gcc output.c -o program
@@ -182,6 +188,13 @@ gcc output.c -o program
 - Generated fast mode can be compiled with `-DFAST_C` for the smallest emitted diagnostics.
 - Base-bank programs use optimized static decode codegen path.
 - Glint Extended programs use generated runtime decode-on-step with mutable RGBA memory.
+
+### Local test/generation scripts in this tree
+
+- `scripts/local_ci/glint_asm/glint_asm` assembles `.gasm` sources into PNG programs.
+- `scripts/local_ci/test_core` runs unit-level local checks.
+- `scripts/local_ci/test_parity.sh` runs interpreter vs codegen parity and CLI/report checks.
+- `make test` is the quick project test entrypoint used for smoke checks.
 
 ### Support Matrix
 
@@ -252,9 +265,8 @@ Execution paths:
 
 Test paths:
 
-- Unit semantics are covered by the local unit test binary target in `make test`.
-- Parity and CLI/report checks are covered by the local parity test step in `make test`.
 - CI gate: `.github/workflows/ci.yml` runs `make` and `make test`.
+- Local deep checks are available via `./scripts/local_ci/test_core` and `bash ./scripts/local_ci/test_parity.sh`.
 
 ---
 
