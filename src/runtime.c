@@ -10,6 +10,7 @@ void runtime_init(RuntimeState *rt)
     rt->reg_c = 0;
     rt->reg_d = 0;
     rt->csp = 0;
+    rt->trap_no = -1;
 }
 
 void route_reset(RouteEffect *fx)
@@ -183,19 +184,46 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
             return EXEC_OK;
 
         case INSTR_TRAP_00:
+            rt->trap_no = 0;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_01:
+            rt->trap_no = 1;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_02:
+            rt->trap_no = 2;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_03:
+            rt->trap_no = 3;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_04:
+            rt->trap_no = 4;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_05:
+            rt->trap_no = 5;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_06:
+            rt->trap_no = 6;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_07:
+            rt->trap_no = 7;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_08:
+            rt->trap_no = 8;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_09:
+            rt->trap_no = 9;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_10:
+            rt->trap_no = 10;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_11:
+            rt->trap_no = 11;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_12:
+            rt->trap_no = 12;
+            return EXEC_ERR_TRAP;
         case INSTR_TRAP_13:
+            rt->trap_no = 13;
             return EXEC_ERR_TRAP;
 
         case INSTR_POP:
@@ -386,6 +414,7 @@ ExecStatus execute_pixel_ctx(RuntimeState *rt, DecodedPixel pixel, RouteEffect *
                              unsigned char *img, int w, int h)
 {
     route_reset(fx);
+    rt->trap_no = -1;
 
     if (pixel.type == PIXEL_HALT) return EXEC_HALT;
     if (pixel.type == PIXEL_ERROR) return EXEC_OK; // tracer will handle this
@@ -425,4 +454,10 @@ const char* exec_status_name(ExecStatus s)
         case EXEC_ERR_INPUT: return "ERR_INPUT";
         default: return "UNKNOWN_EXEC_STATUS";
     }
+}
+
+int runtime_trap_no(const RuntimeState *rt)
+{
+    if (!rt) return -1;
+    return rt->trap_no;
 }

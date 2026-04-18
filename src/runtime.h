@@ -34,6 +34,7 @@ typedef struct
     int call_y[CALL_MAX];
     int call_d[CALL_MAX];
     int csp;
+    int trap_no;
 } RuntimeState;
 
 typedef struct
@@ -61,5 +62,6 @@ ExecStatus execute_pixel_ctx(RuntimeState *rt, DecodedPixel pixel, RouteEffect *
                              int cur_x, int cur_y, int cur_d,
                              unsigned char *img, int w, int h);
 const char* exec_status_name(ExecStatus s);
+int runtime_trap_no(const RuntimeState *rt);
 
 #endif

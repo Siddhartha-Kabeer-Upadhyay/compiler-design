@@ -1,6 +1,6 @@
 # Glint Extended
 
-A transpiled esoteric programming language where source code is a PNG image and the output is generated C code.
+A visual esoteric language where source code is a PNG image and output is generated C.
 
 ---
 
@@ -11,7 +11,7 @@ A transpiled esoteric programming language where source code is a PNG image and 
 - **Instructions** = HSV color values of pixels
 - **Execution** = 2D pointer movement through the image
 - **Memory** = Stack + 4 registers (A, B, C, D)
-- **Image Reading** = ``stb_image.h`` stb library
+- **Image Reading** = `stb_image.h` library
 
 ### Glint Extended treats an image as executable space:
 
@@ -109,7 +109,7 @@ Pairing follows hue rows across banks (`A <-> C`, `B <-> D`).
 
 ### Stack
 - LIFO
-- Integer values (0–255)
+- Signed integer values
 - Grows upward, standard operations
 
 ### Registers
@@ -177,6 +177,18 @@ gcc output.c -o program
 - `--opt-level` supports `0`, `1`, `2` (`2` runs one conservative direction-canonicalization round).
 - Base-bank programs use optimized static decode codegen path.
 - Glint Extended programs use generated runtime decode-on-step with mutable RGBA memory.
+
+### Support Matrix
+
+| Capability | Interpreter (`--run` / `--trace`) | Codegen (`-o`) |
+|------------|-------------------------------------|----------------|
+| Base bank (`20 < S <= 60`) | Supported | Supported |
+| Extended bank (`S > 60`) | Supported | Supported |
+| `CALL` / `RET` teleport routing | Supported | Supported |
+| `READ` / `WRITE` mutable image memory | Supported | Supported |
+| `A/B/C/D` registers | Supported | Supported |
+| Trap opcode error (`ERR_TRAP`) | Supported | Supported |
+
 - `--opt-report` prints stats in this format:
   - `OPT_REPORT: passes=<n> changes=<n> nops=<n> dirs=<n> lit=<n> removed=<n> dims=<w>x<h>-><w>x<h>`
   - `passes`: total passes run
@@ -226,7 +238,7 @@ Execution:
 - `main.c`: CLI parsing, mode orchestration (`run`, `trace`, `dump`, `codegen`), exit codes.
 - `ir.*`: decoded array representation consumed by optimizer and codegen.
 - `opt.*`: optimization passes by level (`0/1/2`) and optimization stats.
-- `codegen.*`: emits standalone C from (optionally optimized) IR.
+- `codegen.*`: emits standalone C (optimized IR path for base bank, runtime decode path for extended bank).
 
 Execution paths:
 
@@ -238,5 +250,19 @@ Test paths:
 - Unit semantics are covered by the local unit test binary target in `make test`.
 - Parity and CLI/report checks are covered by the local parity test step in `make test`.
 - CI gate: `.github/workflows/ci.yml` runs `make` and `make test`.
+
+---
+
+## Known Limitations
+
+- Optimizer passes are tuned for safety-first behavior and are intentionally conservative.
+- Some optimization report counters are aggregate and not split by every micro-transform.
+- Generated C follows VM-style runtime execution and prioritizes semantic parity over aggressive lowering.
+
+## Quality Checklist
+
+- `make` passes.
+- `make test` passes.
+- Interpreter and generated C parity is green for baseline and extended fixtures.
 
 ---

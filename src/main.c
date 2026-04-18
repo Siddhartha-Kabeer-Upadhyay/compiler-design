@@ -257,7 +257,10 @@ int main(int argc, char *argv[])
 			                                  img, width, height);
 			if (exec != EXEC_OK && exec != EXEC_HALT)
 			{
-			    fprintf(stderr, "EXEC_ERROR: %s\n", exec_status_name(exec));
+			    if (exec == EXEC_ERR_TRAP)
+			        fprintf(stderr, "EXEC_ERROR: %s_%02d\n", exec_status_name(exec), runtime_trap_no(&rt));
+			    else
+			        fprintf(stderr, "EXEC_ERROR: %s\n", exec_status_name(exec));
 			    state.error = 1;
 			    break;
 			}
