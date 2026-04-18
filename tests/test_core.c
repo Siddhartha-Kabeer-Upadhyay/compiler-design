@@ -226,7 +226,7 @@ static void test_runtime_ex_ops(void)
     expect_int("ex-ret-ok", execute_pixel_at(&rt, ret, &fx, 9, 9, DIR_UP), EXEC_OK);
     expect_int("ex-ret-csp", rt.csp, 0);
     expect_int("ex-ret-tp", fx.do_tp, 1);
-    expect_int("ex-ret-x", fx.tp_x, 4);
+    expect_int("ex-ret-x", fx.tp_x, 3);
     expect_int("ex-ret-y", fx.tp_y, 5);
     expect_int("ex-ret-d", fx.tp_dir, DIR_LEFT);
 
@@ -297,6 +297,63 @@ static void test_tracer_moves(void)
     expect_int("tracer-oob-flag", t2.error, 1);
 }
 
+static void test_call_ret_flow(void)
+{
+    RuntimeState rt;
+    TracerState st = tracer_init();
+    RouteEffect fx;
+    runtime_init(&rt);
+
+    DecodedPixel d3 = { PIXEL_DATA, INSTR_NONE, 3 };
+    DecodedPixel d0 = { PIXEL_DATA, INSTR_NONE, 0 };
+    DecodedPixel call = { PIXEL_CODE, INSTR_CALL, 0 };
+    DecodedPixel ret = { PIXEL_CODE, INSTR_RET, 0 };
+
+    expect_int("call-flow-dx", execute_pixel(&rt, d3, &fx), EXEC_OK);
+    expect_int("call-flow-dy", execute_pixel(&rt, d0, &fx), EXEC_OK);
+    expect_int("call-flow-call", execute_pixel_at(&rt, call, &fx, st.x, st.y, st.dir), EXEC_OK);
+    expect_int("call-flow-apply-call", tracer_apply(&st, 5, 2, &fx), 1);
+    expect_int("call-flow-at-x", st.x, 3);
+    expect_int("call-flow-at-y", st.y, 0);
+
+    expect_int("call-flow-ret", execute_pixel_at(&rt, ret, &fx, st.x, st.y, st.dir), EXEC_OK);
+    expect_int("call-flow-apply-ret", tracer_apply(&st, 5, 2, &fx), 1);
+    expect_int("call-flow-back-x", st.x, 1);
+    expect_int("call-flow-back-y", st.y, 0);
+}
+
+static void test_read_write_flow(void)
+{
+    RuntimeState rt;
+    TracerState st = tracer_init();
+    RouteEffect fx;
+    runtime_init(&rt);
+
+    unsigned char img[40];
+    for (int i = 0; i < 40; i++) img[i] = 0;
+    img[0] = 1; img[1] = 1; img[2] = 1; img[3] = 255;
+
+    DecodedPixel d2 = { PIXEL_DATA, INSTR_NONE, 2 };
+    DecodedPixel d0 = { PIXEL_DATA, INSTR_NONE, 0 };
+    DecodedPixel d7 = { PIXEL_DATA, INSTR_NONE, 7 };
+    DecodedPixel wr = { PIXEL_CODE, INSTR_WRITE, 0 };
+    DecodedPixel rd = { PIXEL_CODE, INSTR_READ, 0 };
+
+    execute_pixel(&rt, d7, &fx);
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d0, &fx);
+    expect_int("rw-flow-write", execute_pixel_ctx(&rt, wr, &fx, st.x, st.y, st.dir, img, 5, 2), EXEC_OK);
+    expect_int("rw-flow-r", img[8], 7);
+    expect_int("rw-flow-g", img[9], 7);
+    expect_int("rw-flow-b", img[10], 7);
+    expect_int("rw-flow-a", img[11], 255);
+
+    execute_pixel(&rt, d2, &fx);
+    execute_pixel(&rt, d0, &fx);
+    expect_int("rw-flow-read", execute_pixel_ctx(&rt, rd, &fx, st.x, st.y, st.dir, img, 5, 2), EXEC_OK);
+    expect_int("rw-flow-val", rt.stack[rt.sp - 1], 7);
+}
+
 int main(void)
 {
     test_hsv();
@@ -304,6 +361,8 @@ int main(void)
     test_runtime_core();
     test_runtime_ex_ops();
     test_tracer_moves();
+    test_call_ret_flow();
+    test_read_write_flow();
 
     if (failures)
     {

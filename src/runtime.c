@@ -94,6 +94,10 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
             if (rt->csp >= CALL_MAX) return EXEC_ERR_CALL_OVERFLOW;
             rt->call_x[rt->csp] = cur_x;
             rt->call_y[rt->csp] = cur_y;
+            if (cur_d == 0) rt->call_x[rt->csp]++;
+            else if (cur_d == 1) rt->call_y[rt->csp]++;
+            else if (cur_d == 2) rt->call_x[rt->csp]--;
+            else if (cur_d == 3) rt->call_y[rt->csp]--;
             rt->call_d[rt->csp] = cur_d;
             rt->csp++;
             if (fx)

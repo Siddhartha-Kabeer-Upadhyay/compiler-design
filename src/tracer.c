@@ -22,6 +22,19 @@ TracerState tracer_init(void)
 
 int tracer_apply(TracerState *st, int w, int h, const RouteEffect *fx)
 {
+    if (fx && fx->do_tp)
+    {
+        st->x = fx->tp_x;
+        st->y = fx->tp_y;
+        st->dir = (Direction)fx->tp_dir;
+        if (!tracer_in_bounds(st, w, h))
+        {
+            st->error = 1;
+            return 0;
+        }
+        return 1;
+    }
+
     if (fx && fx->set_dir)
         st->dir = (Direction)fx->dir;
 
@@ -45,18 +58,6 @@ int tracer_apply(TracerState *st, int w, int h, const RouteEffect *fx)
     if (fx && fx->do_cond)
     {
         tracer_move_once(st);
-        if (!tracer_in_bounds(st, w, h))
-        {
-            st->error = 1;
-            return 0;
-        }
-    }
-
-    if (fx && fx->do_tp)
-    {
-        st->x = fx->tp_x;
-        st->y = fx->tp_y;
-        st->dir = (Direction)fx->tp_dir;
         if (!tracer_in_bounds(st, w, h))
         {
             st->error = 1;
