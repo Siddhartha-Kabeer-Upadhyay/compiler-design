@@ -235,8 +235,8 @@ Execution paths:
 
 Test paths:
 
-- Unit semantics: `scripts/local_ci/test_core.c`.
-- Parity and CLI/report checks: `scripts/local_ci/test_parity.sh`.
+- Unit semantics are covered by the local unit test binary target in `make test`.
+- Parity and CLI/report checks are covered by the local parity test step in `make test`.
 - CI gate: `.github/workflows/ci.yml` runs `make` and `make test`.
 
 ---
