@@ -112,6 +112,7 @@ static void test_runtime_ex_ops(void)
     DecodedPixel d1 = { PIXEL_DATA, INSTR_NONE, 1 };
     DecodedPixel d2 = { PIXEL_DATA, INSTR_NONE, 2 };
     DecodedPixel d3 = { PIXEL_DATA, INSTR_NONE, 3 };
+    DecodedPixel d0 = { PIXEL_DATA, INSTR_NONE, 0 };
     DecodedPixel d5 = { PIXEL_DATA, INSTR_NONE, 5 };
     DecodedPixel d6 = { PIXEL_DATA, INSTR_NONE, 6 };
 
@@ -129,6 +130,8 @@ static void test_runtime_ex_ops(void)
     DecodedPixel jlt = { PIXEL_CODE, INSTR_JLT, 0 };
     DecodedPixel call = { PIXEL_CODE, INSTR_CALL, 0 };
     DecodedPixel ret = { PIXEL_CODE, INSTR_RET, 0 };
+    DecodedPixel read_op = { PIXEL_CODE, INSTR_READ, 0 };
+    DecodedPixel write_op = { PIXEL_CODE, INSTR_WRITE, 0 };
 
     expect_int("ex-dup-underflow", execute_pixel(&rt, dup, &fx), EXEC_ERR_STACK_UNDERFLOW);
     expect_int("ex-over-underflow", execute_pixel(&rt, over, &fx), EXEC_ERR_STACK_UNDERFLOW);
@@ -226,6 +229,48 @@ static void test_runtime_ex_ops(void)
     expect_int("ex-ret-x", fx.tp_x, 4);
     expect_int("ex-ret-y", fx.tp_y, 5);
     expect_int("ex-ret-d", fx.tp_dir, DIR_LEFT);
+
+    {
+        unsigned char mem[16] = {
+            10, 20, 30, 255,
+            0,  0,  0,  0,
+            0,  0,  0,  255,
+            0,  0,  0,  255
+        };
+
+        runtime_init(&rt);
+        expect_int("ex-read-ctx", execute_pixel_ctx(&rt, read_op, &fx, 0, 0, DIR_RIGHT,
+                                                     NULL, 0, 0), EXEC_ERR_MEM_CTX);
+
+        rt.sp = 0;
+        execute_pixel(&rt, d1, &fx);
+        execute_pixel(&rt, d0, &fx);
+        expect_int("ex-read-alpha", execute_pixel_ctx(&rt, read_op, &fx, 0, 0, DIR_RIGHT,
+                                                       mem, 2, 2), EXEC_ERR_MEM_ALPHA);
+
+        rt.sp = 0;
+        execute_pixel(&rt, d3, &fx);
+        execute_pixel(&rt, d3, &fx);
+        expect_int("ex-read-oob", execute_pixel_ctx(&rt, read_op, &fx, 0, 0, DIR_RIGHT,
+                                                     mem, 2, 2), EXEC_ERR_MEM_OOB);
+
+        rt.sp = 0;
+        execute_pixel(&rt, d0, &fx);
+        execute_pixel(&rt, d0, &fx);
+        expect_int("ex-read-ok", execute_pixel_ctx(&rt, read_op, &fx, 0, 0, DIR_RIGHT,
+                                                    mem, 2, 2), EXEC_OK);
+        expect_int("ex-read-val", rt.stack[rt.sp - 1], 30);
+
+        execute_pixel(&rt, d5, &fx);
+        execute_pixel(&rt, d1, &fx);
+        execute_pixel(&rt, d0, &fx);
+        expect_int("ex-write-ok", execute_pixel_ctx(&rt, write_op, &fx, 0, 0, DIR_RIGHT,
+                                                     mem, 2, 2), EXEC_OK);
+        expect_int("ex-write-r", mem[4], 5);
+        expect_int("ex-write-g", mem[5], 5);
+        expect_int("ex-write-b", mem[6], 5);
+        expect_int("ex-write-a", mem[7], 255);
+    }
 }
 
 static void test_tracer_moves(void)

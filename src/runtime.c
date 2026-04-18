@@ -119,7 +119,7 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
 
         case INSTR_READ:
         case INSTR_WRITE:
-            return EXEC_OK;
+            return EXEC_ERR_MEM_CTX;
 
         case INSTR_DUP:
             if (!runtime_peek(rt, &a)) return EXEC_ERR_STACK_UNDERFLOW;
@@ -332,11 +332,54 @@ static ExecStatus exec_code(RuntimeState *rt, Instruction instr, RouteEffect *fx
     return EXEC_OK;
 }
 
+static ExecStatus exec_mem(RuntimeState *rt, Instruction instr, unsigned char *img, int w, int h)
+{
+    int x, y, v;
+    int idx;
+
+    if (!img || w <= 0 || h <= 0) return EXEC_ERR_MEM_CTX;
+
+    if (instr == INSTR_READ)
+    {
+        if (!runtime_pop(rt, &y) || !runtime_pop(rt, &x)) return EXEC_ERR_STACK_UNDERFLOW;
+        if (x < 0 || x >= w || y < 0 || y >= h) return EXEC_ERR_MEM_OOB;
+        idx = (y * w + x) * 4;
+        if (img[idx + 3] == 0) return EXEC_ERR_MEM_ALPHA;
+        v = img[idx + 0];
+        if (img[idx + 1] > v) v = img[idx + 1];
+        if (img[idx + 2] > v) v = img[idx + 2];
+        if (!runtime_push(rt, v)) return EXEC_ERR_STACK_OVERFLOW;
+        return EXEC_OK;
+    }
+
+    if (instr == INSTR_WRITE)
+    {
+        if (!runtime_pop(rt, &y) || !runtime_pop(rt, &x) || !runtime_pop(rt, &v))
+            return EXEC_ERR_STACK_UNDERFLOW;
+        if (x < 0 || x >= w || y < 0 || y >= h) return EXEC_ERR_MEM_OOB;
+        if (v < 0) v = 0;
+        if (v > 255) v = 255;
+        idx = (y * w + x) * 4;
+        img[idx + 0] = (unsigned char)v;
+        img[idx + 1] = (unsigned char)v;
+        img[idx + 2] = (unsigned char)v;
+        img[idx + 3] = 255;
+        return EXEC_OK;
+    }
+
+    return EXEC_OK;
+}
+
 ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx)
 { return execute_pixel_at(rt, pixel, fx, 0, 0, 0); }
 
 ExecStatus execute_pixel_at(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
                             int cur_x, int cur_y, int cur_d)
+{ return execute_pixel_ctx(rt, pixel, fx, cur_x, cur_y, cur_d, NULL, 0, 0); }
+
+ExecStatus execute_pixel_ctx(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
+                             int cur_x, int cur_y, int cur_d,
+                             unsigned char *img, int w, int h)
 {
     route_reset(fx);
 
@@ -351,6 +394,8 @@ ExecStatus execute_pixel_at(RuntimeState *rt, DecodedPixel pixel, RouteEffect *f
 
     if (pixel.type == PIXEL_CODE)
     {
+        if (pixel.instr == INSTR_READ || pixel.instr == INSTR_WRITE)
+            return exec_mem(rt, pixel.instr, img, w, h);
         return exec_code(rt, pixel.instr, fx, cur_x, cur_y, cur_d);
     }
 
@@ -366,6 +411,9 @@ const char* exec_status_name(ExecStatus s)
         case EXEC_ERR_TRAP: return "ERR_TRAP";
         case EXEC_ERR_CALL_UNDERFLOW: return "ERR_CALL_UNDERFLOW";
         case EXEC_ERR_CALL_OVERFLOW: return "ERR_CALL_OVERFLOW";
+        case EXEC_ERR_MEM_OOB: return "ERR_MEM_OOB";
+        case EXEC_ERR_MEM_ALPHA: return "ERR_MEM_ALPHA";
+        case EXEC_ERR_MEM_CTX: return "ERR_MEM_CTX";
         case EXEC_ERR_STACK_UNDERFLOW: return "ERR_STACK_UNDERFLOW";
         case EXEC_ERR_STACK_OVERFLOW: return "ERR_STACK_OVERFLOW";
         case EXEC_ERR_DIV_ZERO: return "ERR_DIV_ZERO";

@@ -12,6 +12,9 @@ typedef enum
     EXEC_ERR_TRAP,
     EXEC_ERR_CALL_UNDERFLOW,
     EXEC_ERR_CALL_OVERFLOW,
+    EXEC_ERR_MEM_OOB,
+    EXEC_ERR_MEM_ALPHA,
+    EXEC_ERR_MEM_CTX,
     EXEC_ERR_STACK_UNDERFLOW,
     EXEC_ERR_STACK_OVERFLOW,
     EXEC_ERR_DIV_ZERO,
@@ -54,6 +57,9 @@ void route_reset(RouteEffect *fx);
 ExecStatus execute_pixel(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx);
 ExecStatus execute_pixel_at(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
                             int cur_x, int cur_y, int cur_d);
+ExecStatus execute_pixel_ctx(RuntimeState *rt, DecodedPixel pixel, RouteEffect *fx,
+                             int cur_x, int cur_y, int cur_d,
+                             unsigned char *img, int w, int h);
 const char* exec_status_name(ExecStatus s);
 
 #endif
