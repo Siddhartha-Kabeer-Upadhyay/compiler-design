@@ -175,6 +175,8 @@ gcc output.c -o program
 
 - `--opt` is only valid with `-o` and currently maps to safe optimization passes.
 - `--opt-level` supports `0`, `1`, `2` (`2` runs one conservative direction-canonicalization round).
+- Base-bank programs use optimized static decode codegen path.
+- Glint Extended programs use generated runtime decode-on-step with mutable RGBA memory.
 - `--opt-report` prints stats in this format:
   - `OPT_REPORT: passes=<n> changes=<n> nops=<n> dirs=<n> lit=<n> removed=<n> dims=<w>x<h>-><w>x<h>`
   - `passes`: total passes run
@@ -233,7 +235,7 @@ Execution paths:
 
 Test paths:
 
-- Unit semantics: `tests/test_core.c`.
+- Unit semantics: `scripts/local_ci/test_core.c`.
 - Parity and CLI/report checks: `scripts/local_ci/test_parity.sh`.
 - CI gate: `.github/workflows/ci.yml` runs `make` and `make test`.
 

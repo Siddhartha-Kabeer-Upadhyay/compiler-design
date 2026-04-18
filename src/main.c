@@ -10,26 +10,6 @@
 #include "runtime.h"
 #include "codegen.h"
 
-static int codegen_blocked(const unsigned char *img, int w, int h)
-{
-    for (int y = 0; y < h; y++)
-    {
-        for (int x = 0; x < w; x++)
-        {
-            int idx = (y * w + x) * 4;
-            unsigned char r = img[idx + 0];
-            unsigned char g = img[idx + 1];
-            unsigned char b = img[idx + 2];
-            unsigned char a = img[idx + 3];
-            DecodedPixel p = decode_pixel(r, g, b, a);
-            if (p.type != PIXEL_CODE) continue;
-            if (rgb_to_hsv(r, g, b).s > 60) return 1;
-        }
-    }
-
-    return 0;
-}
-
 int main(int argc, char *argv[]) 
 {
 	// check how many args were passed, argv[0] returns the executable name
@@ -177,13 +157,6 @@ int main(int argc, char *argv[])
 
     if (codegen_mode)
     {
-        if (codegen_blocked(img, width, height))
-        {
-            stbi_image_free(img);
-            fprintf(stderr, "Error: Codegen does not support Glint Extended bank yet\n");
-            return 1;
-        }
-
         CodegenOptions cg_options;
         cg_options.enable_opt = opt_mode || (opt_level > 0);
         cg_options.opt_level = (opt_level >= 0) ? opt_level : (cg_options.enable_opt ? 1 : 0);
