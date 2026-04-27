@@ -87,7 +87,7 @@ function initPixels(){
   pixels = [];
   for(let y=0;y<H;y++){
     pixels[y]=[];
-    for(let x=0;x<W;x++) pixels[y][x]={r:255,g:255,b:255,a:255};
+    for(let x=0;x<W;x++) pixels[y][x]={r:0,g:0,b:0,a:0};
   }
 }
 function updateDims(){
@@ -171,7 +171,7 @@ function applyTool(x,y){
   if(x<0||x>=W||y<0||y>=H) return;
   const c=colors[selColorIdx];
   if(tool==='pencil') pixels[y][x]={r:c.r,g:c.g,b:c.b,a:c.a};
-  else if(tool==='eraser') pixels[y][x]={r:255,g:255,b:255,a:255};
+  else if(tool==='eraser') pixels[y][x]={r:0,g:0,b:0,a:0};
   else if(tool==='fill') floodFill(x,y,c);
   else if(tool==='eyedropper'){
     const p=pixels[y][x];
@@ -207,7 +207,7 @@ canvas.addEventListener('mousemove', e=>{
   $('#status-pos').textContent=`Pos: ${x}, ${y}`;
   if(x>=0&&x<W&&y>=0&&y<H){
     const p=pixels[y][x];
-    $('#status-color').textContent=`Color: rgb(${p.r},${p.g},${p.b})`;
+    $('#status-color').textContent=`Color: ${p.a===0 ? 'Transparent' : `rgb(${p.r},${p.g},${p.b})`}`;
     const hsv=CONSTANTS.rgbToHsv(p.r,p.g,p.b);
     const instrName = CONSTANTS.decodeInstrFromPixel(p, hsv);
     $('#status-instr').textContent=`Instruction: ${instrName}`;
