@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glint Extended — Visual Pixel Compiler</title>
+    <meta name="description" content="A visual pixel art editor for the Glint Extended esoteric programming language. Paint instructions as colors, compile images to C code.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ─── Title Bar ─── -->
+    <header id="titlebar">
+        <div class="titlebar-left">
+            <span class="logo-icon">◆</span>
+            <h1>Glint Extended</h1>
+            <span class="subtitle">Visual Pixel Compiler</span>
+        </div>
+        <div class="titlebar-right">
+            <button id="btn-new" class="titlebar-btn" title="New Canvas">
+                <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                New
+            </button>
+            <button id="btn-open" class="titlebar-btn" title="Open Image">
+                <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 5V3a1 1 0 011-1h3l1 1h4a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                Open
+            </button>
+            <button id="btn-download" class="titlebar-btn" title="Download PNG">
+                <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Download
+            </button>
+            <div class="divider-v"></div>
+            <button id="btn-run" class="titlebar-btn run-btn" title="Run / Interpret">
+                <svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,1 12,7 3,13" fill="currentColor"/></svg>
+                Run
+            </button>
+        </div>
+    </header>
+
+    <!-- ─── Main Layout ─── -->
+    <main id="workspace">
+        <div id="main-editor-area">
+        <!-- Left Tool Sidebar -->
+        <aside id="tool-sidebar">
+            <div class="tool-group">
+                <button class="tool-btn active" data-tool="pencil" title="Pencil (P)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M13.5 2.5l2 2-9 9H4.5v-2l9-9z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M11 5l2 2" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="eraser" title="Eraser (E)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="6" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.2" fill="none" transform="rotate(-20 9 10)"/><line x1="3" y1="15" x2="15" y2="15" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="fill" title="Fill Bucket (F)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 14l5-10 5 10H4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M14 11c1 1 2 2 2 3s-1 1-2 0" stroke="currentColor" stroke-width="1.2" fill="currentColor"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="eyedropper" title="Eyedropper (I)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M14 4a2 2 0 00-3 0L5 10l-1 4 4-1 6-6a2 2 0 000-3z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                </button>
+            </div>
+            <div class="divider-h"></div>
+            <div class="tool-group">
+                <button class="tool-btn" id="btn-zoom-in" title="Zoom In (+)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="12" y1="12" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+                <button class="tool-btn" id="btn-zoom-out" title="Zoom Out (-)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="12" y1="12" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h4" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+                <button class="tool-btn" id="btn-zoom-fit" title="Fit to View">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3 7h12M7 3v12" stroke="currentColor" stroke-width="0.6" stroke-dasharray="2 1"/></svg>
+                </button>
+            </div>
+            <div class="divider-h"></div>
+            <div class="tool-group">
+                <button class="tool-btn" id="btn-undo" title="Undo (Ctrl+Z)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M5 7l-3 3 3 3" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h10a4 4 0 000-8H8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+                </button>
+                <button class="tool-btn" id="btn-redo" title="Redo (Ctrl+Y)">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M13 7l3 3-3 3" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10H6a4 4 0 010-8h4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+                </button>
+                <button class="tool-btn" id="btn-clear" title="Clear Canvas">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M5 3h8l1 12H4L5 3z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3 3h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7 1h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Center Canvas Area -->
+        <section id="canvas-area">
+            <!-- Drop Zone Overlay -->
+            <div id="drop-zone" class="drop-zone hidden">
+                <div class="drop-zone-inner">
+                    <svg width="48" height="48" viewBox="0 0 48 48"><path d="M24 8v24M16 24l8 8 8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 36h32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    <p>Drop your <strong>.png</strong> Glint image here</p>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div id="canvas-container">
+                <canvas id="pixel-canvas"></canvas>
+            </div>
+
+            <!-- Status Bar -->
+            <div id="status-bar">
+                <span id="status-pos">Pos: 0, 0</span>
+                <span id="status-dim">Canvas: 8 × 8</span>
+                <span id="status-zoom">Zoom: 100%</span>
+                <span id="status-color">Color: —</span>
+                <span id="status-instr">Instruction: —</span>
+            </div>
+        </section>
+
+        <!-- Right Panel -->
+        <aside id="right-panel">
+            <!-- Dimension Controls -->
+            <div class="panel-section" id="dimensions-panel">
+                <div class="panel-header">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                    Canvas Size
+                </div>
+                <div class="dim-controls">
+                    <div class="dim-field">
+                        <label for="dim-width">W</label>
+                        <input type="number" id="dim-width" min="1" max="1024" value="8">
+                    </div>
+                    <span class="dim-x">×</span>
+                    <div class="dim-field">
+                        <label for="dim-height">H</label>
+                        <input type="number" id="dim-height" min="1" max="1024" value="8">
+                    </div>
+                    <button id="btn-resize" class="btn-small" title="Apply Resize">Apply</button>
+                </div>
+                <div class="dim-presets">
+                    <button class="preset-btn" data-w="2" data-h="2">2×2</button>
+                    <button class="preset-btn" data-w="4" data-h="4">4×4</button>
+                    <button class="preset-btn" data-w="8" data-h="8">8×8</button>
+                    <button class="preset-btn" data-w="16" data-h="16">16×16</button>
+                    <button class="preset-btn" data-w="32" data-h="32">32×32</button>
+                    <button class="preset-btn" data-w="3" data-h="4">3×4</button>
+                    <button class="preset-btn" data-w="4" data-h="3">4×3</button>
+                    <button class="preset-btn" data-w="64" data-h="64">64×64</button>
+                </div>
+            </div>
+
+            <!-- Color Palette -->
+            <div class="panel-section" id="palette-panel">
+                <div class="panel-header">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="6" cy="3" r="1" fill="currentColor"/></svg>
+                    Instruction Palette
+                </div>
+                <div id="color-palette" class="color-grid">
+                    <!-- Colors injected by JS -->
+                </div>
+                <div class="custom-palette-controls">
+                    <div class="dim-field">
+                        <label title="Data Value (0-255)">Data</label>
+                        <input type="number" id="data-input" min="0" max="255" value="42" style="width: 48px;">
+                        <button id="btn-add-data" class="btn-small" title="Add Data Swatch">+</button>
+                    </div>
+                    <div class="divider-v"></div>
+                    <div class="dim-field">
+                        <label>Custom</label>
+                        <input type="color" id="native-picker" value="#ff0000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Color Info -->
+            <div class="panel-section" id="info-panel">
+                <div class="panel-header">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="6" y1="5" x2="6" y2="9" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="3.5" r="0.7" fill="currentColor"/></svg>
+                    Color Info
+                </div>
+                <div id="color-info-content">
+                    <div class="color-preview-row">
+                        <div id="color-swatch"></div>
+                        <div id="color-name">Select a color</div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-label">RGB</div>
+                        <div class="info-value" id="info-rgb">—</div>
+                        <div class="info-label">HSV</div>
+                        <div class="info-value" id="info-hsv">—</div>
+                        <div class="info-label">Pixel Type</div>
+                        <div class="info-value" id="info-type">—</div>
+                        <div class="info-label">Bank</div>
+                        <div class="info-value" id="info-bank">—</div>
+                        <div class="info-label">Instruction</div>
+                        <div class="info-value highlight" id="info-instr">—</div>
+                        <div class="info-label">Operation</div>
+                        <div class="info-value" id="info-operation">—</div>
+                        <div class="info-label">Stack Effect</div>
+                        <div class="info-value" id="info-stack">—</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        </div>
+
+        <!-- Run Output -->
+        <div class="panel-section" id="output-panel">
+            <div id="output-resizer"></div>
+            <div class="panel-header">
+                <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="2" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3 5l2 2-2 2" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="8" x2="9" y2="8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                Output
+                <button id="btn-clear-output" class="btn-icon" title="Clear Output">✕</button>
+            </div>
+            <pre id="output-console"></pre>
+        </div>
+    </main>
+
+    <!-- Hidden file input -->
+    <input type="file" id="file-input" accept=".png,image/png" style="display:none">
+
+    <!-- Run Modal -->
+    <div id="run-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Run Glint Program</h2>
+                <button id="modal-close" class="btn-icon">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>Mode</label>
+                    <select id="run-mode">
+                        <option value="run">Run (default)</option>
+                        <option value="trace">Trace (step-by-step)</option>
+                        <option value="dump">Dump (pixel table)</option>
+                    </select>
+                </div>
+                <div class="modal-field" id="trace-limit-field" style="display:none">
+                    <label>Step Limit</label>
+                    <input type="number" id="trace-limit" value="1000" min="1" max="100000">
+                </div>
+                <div class="modal-field">
+                    <label>Input (stdin)</label>
+                    <textarea id="run-stdin" placeholder="Enter program input here..." rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button id="modal-cancel" class="btn-secondary">Cancel</button>
+                    <button id="modal-run" class="btn-primary">
+                        <svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,1 12,7 3,13" fill="currentColor"/></svg>
+                        Execute
+                    </button>
+                </div>
+            </div>
+            <div class="modal-note">
+                <strong>Note:</strong> This securely passes your pixel canvas to your local WSL C Compiler (<code>./glint</code>) for native execution, ensuring 100% accurate results.
+            </div>
+        </div>
+    </div>
+
+    <script src="constants.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
